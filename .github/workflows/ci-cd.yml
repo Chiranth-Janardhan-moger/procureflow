@@ -24,24 +24,24 @@ jobs:
       - name: Install All Dependencies
         run: |
           npm install
-          npm install --prefix client
-          npm install --prefix server
+          npm install --prefix frontend
+          npm install --prefix backend
 
       - name: Dependency Security Audit
         run: npm run audit || echo "Audit completed with warnings"
 
       - name: Code Quality & Static Type Verification
         run: |
-          npm run build --prefix client
-          npm run build --prefix server
+          npm run build --prefix frontend
+          npm run build --prefix backend
 
       - name: Start Background Server for Integration Testing
         run: |
-          npm run start --prefix server &
+          npm run start --prefix backend &
           npx wait-on -t 30000 http://localhost:5000/api/health
 
       - name: Execute End-to-End Procurement Lifecycle Tests
-        run: npm run test --prefix server
+        run: npm run test --prefix backend
 
   deploy-vercel:
     name: Deploy to Vercel
@@ -60,8 +60,8 @@ jobs:
       - name: Install Dependencies & Build
         run: |
           npm install
-          npm install --prefix client
-          npm install --prefix server
+          npm install --prefix frontend
+          npm install --prefix backend
           npm run build
 
       - name: Deploy to Vercel (Production)

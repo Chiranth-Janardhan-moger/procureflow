@@ -32,12 +32,12 @@ app.get('/api/health', (req, res) => {
 app.use('/api', apiRouter)
 
 // Serve frontend in production if built
-const clientDist = path.join(__dirname, '../../client/dist')
-if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist))
+const frontendDist = path.join(__dirname, '../../frontend/dist')
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist))
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next()
-    res.sendFile(path.join(clientDist, 'index.html'))
+    res.sendFile(path.join(frontendDist, 'index.html'))
   })
 }
 

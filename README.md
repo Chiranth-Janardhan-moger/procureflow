@@ -46,13 +46,13 @@ Clone the repository and install dependencies:
 git clone <repository-url>
 cd bea
 npm install
-npm install --prefix client
-npm install --prefix server
+npm install --prefix frontend
+npm install --prefix backend
 ```
 
 ### Database Configuration (Neon PostgreSQL)
 
-Configure your database connection string in `server/.env`:
+Configure your database connection string in `backend/.env`:
 
 ```env
 PORT=5000

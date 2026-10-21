@@ -1,9 +1,31 @@
-import { test, describe } from 'node:test'
+import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert'
+import http from 'node:http'
+import { app, ensureDatabase } from '../app.js'
 
 const BASE_URL = 'http://localhost:5000/api'
 
 describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', () => {
+  let serverInstance: http.Server | null = null
+
+  before(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/health`)
+      if (res.ok) return
+    } catch {
+      await ensureDatabase()
+      await new Promise<void>((resolve) => {
+        serverInstance = app.listen(5000, () => resolve())
+      })
+    }
+  })
+
+  after(async () => {
+    if (serverInstance) {
+      await new Promise<void>((resolve) => serverInstance!.close(() => resolve()))
+    }
+  })
+
   let employeeToken = ''
   let managerToken = ''
   let procurementToken = ''
