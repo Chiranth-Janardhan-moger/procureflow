@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
   const menuItems = getMenuItems()
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
+    <aside className="w-64 bg-slate-900 dark:bg-slate-950 border-r border-slate-800 dark:border-slate-800/80 flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)] transition-colors">
       {/* Navigation list */}
       <div className="p-3.5 space-y-6">
         <div>

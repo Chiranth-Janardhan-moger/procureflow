@@ -10,7 +10,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) => {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150">
       <Navbar />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar currentView={currentView} onNavigate={onNavigate} />

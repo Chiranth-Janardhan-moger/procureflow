@@ -1,14 +1,98 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
   }
 
   body {
     font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: #0f172a;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
+
+  .dark body {
+    background-color: #020617;
+    color: #f8fafc;
+  }
+}
+
+/* Global Dark Mode Smooth Theming for Cards, Inputs, Tables & Surfaces */
+.dark .bg-white {
+  background-color: #0f172a;
+}
+
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-50\/80,
+.dark .bg-slate-50 {
+  background-color: #020617;
+}
+
+.dark .bg-slate-100\/70,
+.dark .bg-slate-100 {
+  background-color: #1e293b;
+}
+
+.dark .border-slate-200,
+.dark .border-slate-200\/80,
+.dark .border-slate-200\/90,
+.dark .border-slate-300,
+.dark .border-slate-100 {
+  border-color: #1e293b;
+}
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e293b;
+}
+
+.dark .text-slate-900 {
+  color: #f8fafc;
+}
+
+.dark .text-slate-800 {
+  color: #f1f5f9;
+}
+
+.dark .text-slate-700 {
+  color: #e2e8f0;
+}
+
+.dark .text-slate-600 {
+  color: #cbd5e1;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+.dark tr:hover {
+  background-color: rgba(30, 41, 59, 0.45);
+}
+
+.dark button.hover\:bg-slate-50:hover,
+.dark button.hover\:bg-slate-100:hover,
+.dark div.hover\:bg-slate-50:hover {
+  background-color: #1e293b;
 }
 
 /* Custom crisp scrollbar */
@@ -26,6 +110,14 @@
   border-radius: 9999px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
