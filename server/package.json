@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "tsx --test src/tests/procurement.test.ts",
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
