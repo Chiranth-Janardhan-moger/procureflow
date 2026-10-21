@@ -1,4 +1,4 @@
-import { test, describe, before } from 'node:test'
+import { test, describe } from 'node:test'
 import assert from 'node:assert'
 
 const BASE_URL = 'http://localhost:5000/api'
@@ -21,7 +21,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
   test('1. Healthcheck API returns OK and database status', async () => {
     const res = await fetch(`${BASE_URL}/health`)
     assert.strictEqual(res.status, 200)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.strictEqual(data.status, 'ok')
     assert.ok(data.service.includes('ProcureFlow'))
     assert.ok(data.database)
@@ -36,7 +36,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       body: JSON.stringify({ email: 'rahul@company.com', password: 'password123' }),
     })
     assert.strictEqual(empRes.status, 200)
-    const empData = await empRes.json()
+    const empData = (await empRes.json()) as any
     assert.strictEqual(empData.user.role, 'employee')
     employeeToken = empData.token
 
@@ -47,7 +47,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       body: JSON.stringify({ email: 'anita@company.com', password: 'password123' }),
     })
     assert.strictEqual(mgrRes.status, 200)
-    const mgrData = await mgrRes.json()
+    const mgrData = (await mgrRes.json()) as any
     assert.strictEqual(mgrData.user.role, 'manager')
     managerToken = mgrData.token
 
@@ -58,7 +58,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       body: JSON.stringify({ email: 'kiran@company.com', password: 'password123' }),
     })
     assert.strictEqual(procRes.status, 200)
-    const procData = await procRes.json()
+    const procData = (await procRes.json()) as any
     assert.strictEqual(procData.user.role, 'procurement_officer')
     procurementToken = procData.token
 
@@ -69,7 +69,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       body: JSON.stringify({ email: 'sales@techworld.com', password: 'vendor123' }),
     })
     assert.strictEqual(venRes.status, 200)
-    const venData = await venRes.json()
+    const venData = (await venRes.json()) as any
     assert.strictEqual(venData.user.role, 'vendor')
     vendorToken = venData.token
 
@@ -80,7 +80,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       body: JSON.stringify({ email: 'admin@company.com', password: 'admin123' }),
     })
     assert.strictEqual(admRes.status, 200)
-    const admData = await admRes.json()
+    const admData = (await admRes.json()) as any
     assert.strictEqual(admData.user.role, 'admin')
     adminToken = admData.token
   })
@@ -136,11 +136,10 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     })
 
     assert.strictEqual(res.status, 201)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.ok(data.request.id)
     assert.ok(data.request.pr_number.startsWith('PR-'))
     assert.strictEqual(data.request.status, 'pending')
-    // 2 * 250000 + 4 * 45000 = 500000 + 180000 = 680000
     assert.strictEqual(Number(data.request.total_estimated_cost), 680000)
     assert.strictEqual(data.request.items.length, 2)
 
@@ -163,7 +162,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     })
 
     assert.strictEqual(res.status, 200)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.strictEqual(data.request.status, 'approved')
     assert.ok(data.request.manager_remarks.includes('AI engineering'))
   })
@@ -189,7 +188,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     })
 
     assert.strictEqual(res.status, 201)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.ok(data.rfq.id)
     assert.ok(data.rfq.rfq_number.startsWith('RFQ-'))
     assert.strictEqual(data.rfq.status, 'open')
@@ -222,7 +221,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     })
 
     assert.strictEqual(res.status, 201)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.ok(data.quotation.id)
     assert.ok(data.quotation.quote_number.startsWith('QT-'))
     assert.strictEqual(data.quotation.status, 'submitted')
@@ -245,14 +244,14 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     })
 
     assert.strictEqual(res.status, 200)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.strictEqual(data.success, true)
 
     // Verify RFQ details show recommended quote
     const rfqRes = await fetch(`${BASE_URL}/rfqs/${createdRfqId}`, {
       headers: { Authorization: `Bearer ${procurementToken}` },
     })
-    const rfqData = await rfqRes.json()
+    const rfqData = (await rfqRes.json()) as any
     const recQuote = rfqData.rfq.quotations.find((q: any) => q.id === submittedQuoteId)
     assert.ok(recQuote.is_recommended)
   })
@@ -275,7 +274,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     })
 
     assert.strictEqual(res.status, 201)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.ok(data.order.id)
     assert.ok(data.order.po_number.startsWith('PO-'))
     assert.strictEqual(data.order.status, 'issued')
@@ -312,7 +311,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       }),
     })
     assert.strictEqual(dispatchRes.status, 200)
-    const dispatchData = await dispatchRes.json()
+    const dispatchData = (await dispatchRes.json()) as any
     assert.strictEqual(dispatchData.order.status, 'dispatched')
     assert.strictEqual(dispatchData.order.tracking_ref, 'BDX-99887766BLR')
   })
@@ -339,7 +338,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     })
 
     assert.strictEqual(res.status, 201)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.ok(data.goods_receipt.id)
     assert.ok(data.goods_receipt.grn_number.startsWith('GRN-'))
     assert.strictEqual(data.goods_receipt.accepted_qty, 5)
@@ -349,7 +348,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     const poRes = await fetch(`${BASE_URL}/purchase-orders/${createdPoId}`, {
       headers: { Authorization: `Bearer ${procurementToken}` },
     })
-    const poData = await poRes.json()
+    const poData = (await poRes.json()) as any
     assert.strictEqual(poData.order.status, 'delivered')
   })
 
@@ -374,7 +373,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       body: JSON.stringify(invPayload),
     })
     assert.strictEqual(invRes.status, 201)
-    const invData = await invRes.json()
+    const invData = (await invRes.json()) as any
     assert.ok(invData.invoice.id)
     submittedInvoiceId = invData.invoice.id
 
@@ -395,7 +394,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       body: JSON.stringify(payPayload),
     })
     assert.strictEqual(payRes.status, 201)
-    const payData = await payRes.json()
+    const payData = (await payRes.json()) as any
     assert.strictEqual(payData.payment.payment_ref, 'PAY-882910')
     assert.strictEqual(payData.payment.status, 'paid')
 
@@ -403,7 +402,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     const finalPoRes = await fetch(`${BASE_URL}/purchase-orders/${createdPoId}`, {
       headers: { Authorization: `Bearer ${procurementToken}` },
     })
-    const finalPoData = await finalPoRes.json()
+    const finalPoData = (await finalPoRes.json()) as any
     assert.strictEqual(finalPoData.order.status, 'completed')
   })
 
@@ -413,7 +412,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       headers: { Authorization: `Bearer ${adminToken}` },
     })
     assert.strictEqual(res.status, 200)
-    const data = await res.json()
+    const data = (await res.json()) as any
     assert.ok(data.logs.length >= 10)
 
     // Verify presence of our created actions
@@ -437,16 +436,16 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
   // 14. ANALYTICS & DASHBOARD AGGREGATION
   test('14. Dashboard analytics calculates metrics accurately for all roles', async () => {
     // Employee Analytics
-    const empAnalytics = await fetch(`${BASE_URL}/analytics/dashboard`, {
+    const empAnalytics = (await fetch(`${BASE_URL}/analytics/dashboard`, {
       headers: { Authorization: `Bearer ${employeeToken}` },
-    }).then(r => r.json())
+    }).then(r => r.json())) as any
     assert.strictEqual(empAnalytics.analytics.role, 'employee')
     assert.ok(empAnalytics.analytics.totalRequests >= 1)
 
     // Procurement Analytics
-    const procAnalytics = await fetch(`${BASE_URL}/analytics/dashboard`, {
+    const procAnalytics = (await fetch(`${BASE_URL}/analytics/dashboard`, {
       headers: { Authorization: `Bearer ${procurementToken}` },
-    }).then(r => r.json())
+    }).then(r => r.json())) as any
     assert.strictEqual(procAnalytics.analytics.role, 'procurement_officer')
     assert.ok(procAnalytics.analytics.totalSpend > 0)
   })
