@@ -30,6 +30,9 @@ export const EmployeeDashboard: React.FC<Props> = ({ onCreateRequest }) => {
 
   useEffect(() => {
     loadRequests()
+    const refresh = () => { void loadRequests() }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
   }, [])
 
   const loadRequests = async () => {
@@ -213,6 +216,10 @@ export const EmployeeDashboard: React.FC<Props> = ({ onCreateRequest }) => {
                       <Badge status={req.status} size="sm" />
                     </td>
                     <td className="py-3.5 px-4 text-right">
+                      {req.status === 'draft' && <button type="button" onClick={async () => {
+                        try { await api.updatePurchaseRequestStatus(req.id, 'pending'); await loadRequests() }
+                        catch (error) { alert(error instanceof Error ? error.message : 'Unable to submit request.') }
+                      }} className="mr-2 rounded-lg bg-indigo-600 px-2 py-1 text-xs text-white">Submit for approval</button>}
                       <button
                         onClick={() => {
                           setSelectedPrId(req.id)

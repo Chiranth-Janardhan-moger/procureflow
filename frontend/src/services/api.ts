@@ -117,6 +117,9 @@ export const api = {
       body: JSON.stringify({ reason }),
     }),
 
+  returnVendorRecommendation: (rfqId: number, reason: string) =>
+    request<{ rfq: any }>(`/rfqs/${rfqId}/return-recommendation`, { method: 'POST', body: JSON.stringify({ reason }) }),
+
   // Purchase Orders
   getPurchaseOrders: (status?: string) =>
     request<{ orders: any[] }>(`/purchase-orders${status ? `?status=${status}` : ''}`),

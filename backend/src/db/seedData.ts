@@ -93,6 +93,7 @@ export interface RfqVendorRow {
 }
 
 export interface QuotationRow {
+  line_items?: Array<Record<string, any>>
   id: number
   quote_number: string
   rfq_id: number
@@ -132,6 +133,7 @@ export interface PurchaseOrderRow {
 }
 
 export interface GoodsReceiptRow {
+  items?: Array<Record<string, any>>
   id: number
   grn_number: string
   po_id: number
@@ -648,6 +650,7 @@ export const initialNotifications: NotificationRow[] = [
   },
 ]
 
+// Historical demo events have no recorded client IP address.
 export const initialAuditLogs: AuditLogRow[] = [
   {
     id: 1,
@@ -658,7 +661,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'PURCHASE_REQUEST',
     entity_id: 'PR-102',
     details: 'Created PR-102 for 10 Dell Latitude Laptops (Est: ₹5,08,000)',
-    ip_address: '192.168.1.45',
+    ip_address: null,
     created_at: '2026-10-10T09:30:00Z',
   },
   {
@@ -670,7 +673,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'PURCHASE_REQUEST',
     entity_id: 'PR-102',
     details: 'Approved PR-102 with remarks: "Essential onboarding hardware budget allocated"',
-    ip_address: '192.168.1.12',
+    ip_address: null,
     created_at: '2026-10-10T11:10:00Z',
   },
   {
@@ -682,7 +685,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'RFQ',
     entity_id: 'RFQ-204',
     details: 'Published RFQ-204 inviting 3 verified vendors (TechWorld, Digital Systems, CompZone)',
-    ip_address: '192.168.1.88',
+    ip_address: null,
     created_at: '2026-10-12T10:00:00Z',
   },
   {
@@ -694,7 +697,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'QUOTATION',
     entity_id: 'QT-501',
     details: 'Submitted quotation for ₹5,66,400 with 3-year warranty and 7-day lead time',
-    ip_address: '103.21.54.12',
+    ip_address: null,
     created_at: '2026-10-15T15:30:00Z',
   },
   {
@@ -706,7 +709,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'QUOTATION',
     entity_id: 'QT-501',
     details: 'Recommended TechWorld Solutions (QT-501) for RFQ-204 based on 3-yr warranty and 4.6 rating',
-    ip_address: '192.168.1.88',
+    ip_address: null,
     created_at: '2026-10-17T09:45:00Z',
   },
   {
@@ -718,7 +721,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'RFQ',
     entity_id: 'RFQ-204',
     details: 'Approved selection of TechWorld Solutions for PR-102 procurement',
-    ip_address: '192.168.1.12',
+    ip_address: null,
     created_at: '2026-10-17T10:30:00Z',
   },
   {
@@ -730,7 +733,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'PURCHASE_ORDER',
     entity_id: 'PO-301',
     details: 'Generated Purchase Order PO-301 for TechWorld Solutions (Total: ₹5,66,400)',
-    ip_address: '192.168.1.88',
+    ip_address: null,
     created_at: '2026-10-17T11:00:00Z',
   },
   {
@@ -742,7 +745,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'PURCHASE_ORDER',
     entity_id: 'PO-301',
     details: 'Dispatched order via BlueDart Logistics tracking BDX-9821734BLR',
-    ip_address: '103.21.54.12',
+    ip_address: null,
     created_at: '2026-10-19T10:15:00Z',
   },
   {
@@ -754,7 +757,7 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'GOODS_RECEIPT',
     entity_id: 'GRN-101',
     details: 'Inspected shipment: 9 units accepted, 1 unit rejected for transport bezel damage',
-    ip_address: '192.168.1.88',
+    ip_address: null,
     created_at: '2026-10-20T16:00:00Z',
   },
   {
@@ -766,7 +769,33 @@ export const initialAuditLogs: AuditLogRow[] = [
     entity_type: 'PAYMENT',
     entity_id: 'PAY-92731',
     details: 'Processed payment of ₹5,66,400 for INV-401 via NEFT corporate clearing',
-    ip_address: '192.168.1.5',
+    ip_address: null,
     created_at: '2026-10-21T11:30:00Z',
   },
 ]
+
+// Keep the demonstration records internally consistent with a fulfilled, paid order.
+const demoPrices = [[48000, 800], [49500, 850], [47800, 750]]
+for (const [index, quote] of initialQuotations.entries()) {
+  quote.line_items = initialPrItems.filter(item => item.pr_id === 1).map((item, line) => ({ pr_item_id: item.id, item_name: item.item_name, quantity: item.quantity, unit_price: demoPrices[index][line], subtotal: item.quantity * demoPrices[index][line] }))
+  quote.subtotal = quote.line_items.reduce((sum, line) => sum + line.subtotal, 0)
+  quote.tax_amount = Math.round(quote.subtotal * 18) / 100
+  quote.final_amount = quote.subtotal + quote.tax_amount - quote.discount_amount
+}
+initialQuotations[0].status = 'selected'
+initialRfqs[0].status = 'closed'
+initialPurchaseRequests[0].status = 'completed'
+initialPurchaseOrders[0].status = 'completed'
+initialPurchaseOrders[0].total_amount = initialQuotations[0].final_amount
+initialGoodsReceipts[0].ordered_qty = 20
+initialGoodsReceipts[0].received_qty = 20
+initialGoodsReceipts[0].accepted_qty = 19
+initialGoodsReceipts[0].items = [
+  { pr_item_id: 1, item_name: initialPrItems[0].item_name, received_qty: 10, accepted_qty: 9, rejected_qty: 1, rejection_reason: 'Transit damage; replacement requested.' },
+  { pr_item_id: 2, item_name: initialPrItems[1].item_name, received_qty: 10, accepted_qty: 10, rejected_qty: 0, rejection_reason: null },
+]
+initialGoodsReceipts.push({ id: 2, grn_number: 'GRN-102', po_id: 1, received_date: '2026-10-21', ordered_qty: 20, received_qty: 1, accepted_qty: 1, rejected_qty: 0, rejection_reason: null, received_by: 3, created_at: '2026-10-21T09:00:00Z', items: [{ pr_item_id: 1, item_name: initialPrItems[0].item_name, received_qty: 1, accepted_qty: 1, rejected_qty: 0, rejection_reason: null }] })
+initialInvoices[0].amount = initialQuotations[0].final_amount
+initialInvoices[0].invoice_date = '2026-10-21'
+initialPayments[0].amount = initialQuotations[0].final_amount
+initialPayments[0].payment_date = '2026-10-22'

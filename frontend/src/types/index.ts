@@ -44,6 +44,8 @@ export interface Vendor {
 }
 
 export interface PRItem {
+  quoted_unit_price?: number | null
+  quoted_subtotal?: number | null
   id: number
   pr_id: number
   item_name: string
@@ -51,6 +53,8 @@ export interface PRItem {
   quantity: number
   estimated_unit_price: number
   estimated_total: number
+  accepted_qty?: number
+  remaining_qty?: number
   specification?: string
 }
 
@@ -101,12 +105,15 @@ export interface RFQ {
   created_at: string
   invited_vendor_count?: number
   quotation_count?: number
+  has_submitted_quotation?: boolean
+  has_recommendation?: boolean
   items?: PRItem[]
   invited_vendors?: Vendor[]
   quotations?: Quotation[]
 }
 
 export interface Quotation {
+  line_items?: Array<{ pr_item_id: number; item_name: string; quantity: number; unit_price: number; subtotal: number }>
   id: number
   quote_number: string
   rfq_id: number
@@ -133,6 +140,11 @@ export interface Quotation {
 export type POStatus = 'draft' | 'issued' | 'accepted' | 'processing' | 'dispatched' | 'delivered' | 'completed' | 'cancelled'
 
 export interface PurchaseOrder {
+  quotation?: { quote_number: string; subtotal: number; tax_amount: number; discount_amount: number; final_amount: number; warranty_years: number; delivery_days: number } | null
+  ordered_qty?: number
+  accepted_qty?: number
+  remaining_qty?: number
+  invoice_submitted?: boolean
   id: number
   po_number: string
   rfq_id: number | null
@@ -164,6 +176,7 @@ export interface PurchaseOrder {
 }
 
 export interface GoodsReceipt {
+  items?: Array<{ pr_item_id: number; item_name: string; received_qty: number; accepted_qty: number; rejected_qty: number; rejection_reason?: string | null }>
   id: number
   grn_number: string
   po_id: number

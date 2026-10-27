@@ -47,12 +47,16 @@ export const CreateRfqModal: React.FC<Props> = ({
 
   const loadData = async () => {
     try {
-      const [prRes, vendorRes] = await Promise.all([
+      setError(null)
+      setSelectedPrId(0)
+      setTitle('')
+      const [prRes, vendorRes, rfqRes] = await Promise.all([
         api.getPurchaseRequests(),
         api.getVendors(),
+        api.getRfqs(),
       ])
       const approvedOnly = prRes.requests.filter(
-        r => r.status === 'approved' || r.status === 'in_procurement'
+        r => r.status === 'approved' && !rfqRes.rfqs.some(rfq => rfq.pr_id === r.id)
       )
       setPrs(approvedOnly)
       setVendors(vendorRes.vendors)
@@ -64,6 +68,8 @@ export const CreateRfqModal: React.FC<Props> = ({
 
         setSelectedPrId(target.id)
         setTitle(`Request for Quotation: ${target.purpose.slice(0, 60)}`)
+      } else {
+        setError('No approved purchase requests are waiting for an RFQ. Requests already in procurement cannot start another RFQ.')
       }
 
       // Default invite all active IT vendors
@@ -81,7 +87,7 @@ export const CreateRfqModal: React.FC<Props> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedPrId) {
+    if (!selectedPrId || !prs.some(pr => pr.id === selectedPrId)) {
       setError('Please select an approved Purchase Request.')
       return
     }
@@ -144,6 +150,7 @@ export const CreateRfqModal: React.FC<Props> = ({
             }}
             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-800 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
+            <option value={0} disabled>Select an approved purchase request</option>
             {prs.map(p => (
               <option key={p.id} value={p.id}>
                 {p.pr_number} — {p.purpose.slice(0, 50)}... (₹{Number(p.total_estimated_cost).toLocaleString('en-IN')})
@@ -247,7 +254,7 @@ export const CreateRfqModal: React.FC<Props> = ({
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !selectedPrId || prs.length === 0}
             className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
           >
             <Send className="w-3.5 h-3.5" /> {loading ? 'Publishing...' : 'Publish & Dispatch RFQ'}

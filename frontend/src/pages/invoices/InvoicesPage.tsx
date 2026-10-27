@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import { Invoice } from '../../types'
 import { Badge } from '../../components/common/Badge'
 import { Modal } from '../../components/common/Modal'
 import { CreditCard, CheckCircle2, Clock, Search } from 'lucide-react'
 
 export const InvoicesPage: React.FC = () => {
+  const { user } = useAuth()
+  const canSettle = ['procurement_officer', 'admin'].includes(user?.role || '')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -39,7 +42,7 @@ export const InvoicesPage: React.FC = () => {
   const openPayModal = (inv: Invoice) => {
     setSelectedInvoice(inv)
     setAmount(Number(inv.amount))
-    setPaymentRef(`PAY-${Math.floor(10000 + Math.random() * 90000)}`)
+    setPaymentRef(`PAY-${crypto.randomUUID()}`)
     setPayModalOpen(true)
   }
 
@@ -167,7 +170,7 @@ export const InvoicesPage: React.FC = () => {
                       <Badge status={inv.status} size="sm" />
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      {inv.status !== 'paid' && (
+                      {canSettle && ['submitted', 'verified', 'pending_payment'].includes(inv.status) && (
                         <button
                           onClick={() => openPayModal(inv)}
                           className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1"
@@ -199,7 +202,7 @@ export const InvoicesPage: React.FC = () => {
               type="number"
               required
               value={amount}
-              onChange={e => setAmount(parseFloat(e.target.value) || 0)}
+              readOnly
               className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>

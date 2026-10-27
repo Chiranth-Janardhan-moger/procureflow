@@ -21,14 +21,16 @@ const AppContent: React.FC = () => {
   const { user, loading } = useAuth()
   const [currentView, setCurrentView] = useState('dashboard')
   const [targetPoId, setTargetPoId] = useState<number | null>(null)
-  const [targetRfqId, setTargetRfqId] = useState<number>(1)
+  const [targetRfqId, setTargetRfqId] = useState<number | null>(null)
 
   // Reset to default dashboard on user role change
   useEffect(() => {
     if (user) {
       setCurrentView('dashboard')
+      setTargetPoId(null)
+      setTargetRfqId(null)
     }
-  }, [user?.role])
+  }, [user?.id, user?.role])
 
   if (loading) {
     return (
@@ -56,19 +58,12 @@ const AppContent: React.FC = () => {
     if (currentView === 'invoices') {
       return <InvoicesPage />
     }
-    if (currentView === 'purchase-orders' || currentView === 'deliveries') {
+    if (currentView === 'purchase-orders') {
       return <PurchaseOrdersPage initialPoId={targetPoId} />
     }
     if (currentView === 'comparison') {
-      return (
-        <QuotationComparisonPage
-          rfqId={targetRfqId}
-          onNavigateToPo={poId => {
-            setTargetPoId(poId)
-            setCurrentView('purchase-orders')
-          }}
-        />
-      )
+      if (!targetRfqId) return <div className="space-y-3 p-6"><p>Select Compare Matrix on an active RFQ in the Procurement dashboard.</p><button type="button" className="rounded-lg bg-indigo-600 px-4 py-2 text-white" onClick={() => setCurrentView('dashboard')}>Back to Procurement Dashboard</button></div>
+      return <QuotationComparisonPage rfqId={targetRfqId} onBack={() => { setTargetRfqId(null); setCurrentView('dashboard') }} />
     }
 
     // Role-specific rendering
@@ -119,8 +114,8 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <Layout currentView={currentView} onNavigate={setCurrentView}>
-      {renderView()}
+    <Layout currentView={currentView} onNavigate={view => { setTargetPoId(null); setTargetRfqId(null); setCurrentView(view) }}>
+      <React.Fragment key={`${user.id}-${user.role}`}>{renderView()}</React.Fragment>
     </Layout>
   )
 }

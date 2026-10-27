@@ -15,6 +15,7 @@ export const VendorDirectoryPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [contactPerson, setContactPerson] = useState('')
   const [address, setAddress] = useState('')
@@ -49,12 +50,18 @@ export const VendorDirectoryPage: React.FC = () => {
       return
     }
 
+    if (password.trim().length < 12 || new TextEncoder().encode(password).length > 72) {
+      setError('Choose a vendor login password of at least 12 characters and no more than 72 UTF-8 bytes.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
     try {
       await api.createVendor({
         name,
         email,
+        password,
         phone,
         contact_person: contactPerson,
         address,
@@ -62,7 +69,7 @@ export const VendorDirectoryPage: React.FC = () => {
         category_id: categoryId ? Number(categoryId) : null,
         rating,
       })
-      alert(`Vendor ${name} registered successfully! Auto-generated vendor login credentials issued.`)
+      alert(`Vendor ${name} registered successfully! The vendor can sign in with the email and password you supplied.`)
       setModalOpen(false)
       resetForm()
       await loadVendors()
@@ -76,6 +83,7 @@ export const VendorDirectoryPage: React.FC = () => {
   const resetForm = () => {
     setName('')
     setEmail('')
+    setPassword('')
     setPhone('')
     setContactPerson('')
     setAddress('')
@@ -181,7 +189,10 @@ export const VendorDirectoryPage: React.FC = () => {
       {/* Add Vendor Modal */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false)
+          setPassword('')
+        }}
         title="Onboard New Supplier Vendor"
         subtitle="Registers supplier profile and provisions portal login credentials"
         maxWidth="lg"
@@ -283,6 +294,22 @@ export const VendorDirectoryPage: React.FC = () => {
           </div>
 
           <div>
+            <label htmlFor="vendor-login-password" className="block text-xs font-semibold text-slate-700 mb-1">Vendor Login Password</label>
+            <input
+              id="vendor-login-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={12}
+              maxLength={72}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">Use a unique password with at least 12 characters. Share it privately with the vendor.</p>
+          </div>
+
+          <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Registered Business Address</label>
             <textarea
               rows={2}
@@ -296,7 +323,10 @@ export const VendorDirectoryPage: React.FC = () => {
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
+              onClick={() => {
+                setModalOpen(false)
+                setPassword('')
+              }}
               className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 cursor-pointer"
             >
               Cancel
