@@ -31,9 +31,15 @@ export const ManagerDashboard: React.FC = () => {
   // Vendor Approval Modal state
   const [selectedRfq, setSelectedRfq] = useState<RFQ | null>(null)
   const [vendorModalOpen, setVendorModalOpen] = useState(false)
+  const [returnReason, setReturnReason] = useState('')
+  const [selectedVendorQuoteId, setSelectedVendorQuoteId] = useState<number | null>(null)
+  const [selectionReason, setSelectionReason] = useState('')
 
   useEffect(() => {
     loadData()
+    const refresh = () => { void loadData() }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
   }, [])
 
   const loadData = async () => {
@@ -58,7 +64,7 @@ export const ManagerDashboard: React.FC = () => {
   const rejectedPrs = requests.filter(r => r.status === 'rejected')
 
   // RFQs with a recommended vendor awaiting manager sign-off
-  const pendingVendorApprovals = rfqs.filter(r => r.status === 'evaluation')
+  const pendingVendorApprovals = rfqs.filter(r => r.status === 'evaluation' && r.has_recommendation)
 
   const totalSpend = approvedPrs.reduce((sum, r) => sum + Number(r.total_estimated_cost), 0)
 
@@ -78,17 +84,33 @@ export const ManagerDashboard: React.FC = () => {
     }
   }
 
+  const handleReturnRecommendation = async () => {
+    if (!selectedRfq || !returnReason.trim()) { alert('Enter a reason for sending the recommendation back.'); return }
+    setActionLoading(true)
+    try {
+      await api.returnVendorRecommendation(selectedRfq.id, returnReason.trim())
+      setVendorModalOpen(false); setSelectedRfq(null); setReturnReason('')
+      await loadData()
+    } catch (error) { alert(error instanceof Error ? error.message : 'Unable to send back recommendation.') }
+    finally { setActionLoading(false) }
+  }
+
   const handleApproveVendorSelection = async (rfq: RFQ) => {
     const recommendedQuote = rfq.quotations?.find(q => q.is_recommended)
-    if (!recommendedQuote) return
+    const selectedQuote = rfq.quotations?.find(q => q.id === selectedVendorQuoteId)
+    if (!recommendedQuote || !selectedQuote) return
+    if (selectedQuote.id !== recommendedQuote.id && !selectionReason.trim()) {
+      alert('Explain why you are choosing another vendor.'); return
+    }
 
     setActionLoading(true)
     try {
       await api.createPurchaseOrder({
-        quote_id: recommendedQuote.id,
+        quote_id: selectedQuote.id,
         expected_delivery: rfq.expected_delivery_date || new Date().toISOString().split('T')[0],
+        selection_reason: selectionReason.trim() || undefined,
       })
-      alert(`Vendor ${recommendedQuote.vendor_name} approved! Purchase Order generated automatically.`)
+      alert(`Vendor ${selectedQuote.vendor_name} approved! Purchase Order generated automatically.`)
       setVendorModalOpen(false)
       setSelectedRfq(null)
       await loadData()
@@ -114,6 +136,9 @@ export const ManagerDashboard: React.FC = () => {
     try {
       const res = await api.getRfqById(id)
       setSelectedRfq(res.rfq)
+      setReturnReason('')
+      setSelectedVendorQuoteId(res.rfq.quotations?.find((quote: any) => quote.is_recommended)?.id ?? null)
+      setSelectionReason('')
       setVendorModalOpen(true)
     } catch (err) {
       console.error(err)
@@ -403,11 +428,12 @@ export const ManagerDashboard: React.FC = () => {
 
             {/* Other quotes comparison */}
             <div>
-              <h4 className="text-xs font-bold text-slate-700 uppercase mb-2">All Submitted Vendor Quotations</h4>
+              <h4 className="text-xs font-bold text-slate-700 uppercase mb-2">Choose a Vendor from All Submitted Quotations</h4>
               <div className="rounded-xl border border-slate-200 overflow-hidden text-xs">
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-slate-600 font-semibold">
                     <tr>
+                      <th className="p-2.5">Select</th>
                       <th className="p-2.5">Vendor</th>
                       <th className="p-2.5 text-right">Price</th>
                       <th className="p-2.5 text-right">Delivery</th>
@@ -418,7 +444,8 @@ export const ManagerDashboard: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {selectedRfq.quotations?.map(q => (
-                      <tr key={q.id} className={q.is_recommended ? 'bg-purple-50/30 font-semibold' : ''}>
+                      <tr key={q.id} className={selectedVendorQuoteId === q.id ? 'bg-purple-50/30 font-semibold' : ''}>
+                        <td className="p-2.5"><input type="radio" name="manager-vendor-selection" aria-label={`Select ${q.vendor_name}`} checked={selectedVendorQuoteId === q.id} disabled={!['submitted', 'recommended'].includes(q.status)} onChange={() => setSelectedVendorQuoteId(q.id)} /></td>
                         <td className="p-2.5 text-slate-900">{q.vendor_name}</td>
                         <td className="p-2.5 text-right font-mono font-bold">
                           ₹{Number(q.final_amount).toLocaleString('en-IN')}
@@ -436,8 +463,16 @@ export const ManagerDashboard: React.FC = () => {
               </div>
             </div>
 
+            <label className="block text-xs font-semibold">Vendor selection reason {selectedVendorQuoteId !== selectedRfq.quotations?.find(q => q.is_recommended)?.id ? '(required for an alternative)' : '(optional)'}
+              <textarea value={selectionReason} onChange={event => setSelectionReason(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900" placeholder="Explain your decision, for example delivery deadline or warranty" />
+            </label>
+            <p className="text-xs text-slate-500">Procurement recommendation is advisory. An alternative selection requires a reason and is recorded in the audit log.</p>
+            <label className="block text-xs font-semibold">Reason for sending back to Procurement
+              <textarea value={returnReason} onChange={event => setReturnReason(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900" placeholder="Explain what Procurement should reconsider" />
+            </label>
             {/* Actions */}
             <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+              <button type="button" disabled={actionLoading || !returnReason.trim()} onClick={handleReturnRecommendation} className="rounded-xl border border-amber-400 px-4 py-2 text-xs font-bold text-amber-700 disabled:opacity-50">Send back to Procurement</button>
               <button
                 type="button"
                 onClick={() => setVendorModalOpen(false)}
@@ -447,11 +482,11 @@ export const ManagerDashboard: React.FC = () => {
               </button>
               <button
                 type="button"
-                disabled={actionLoading}
+                disabled={actionLoading || !selectedVendorQuoteId || (selectedVendorQuoteId !== selectedRfq.quotations?.find(q => q.is_recommended)?.id && !selectionReason.trim())}
                 onClick={() => handleApproveVendorSelection(selectedRfq)}
                 className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-600/20 transition-all cursor-pointer inline-flex items-center gap-1.5"
               >
-                <Check className="w-3.5 h-3.5" /> Approve Vendor & Generate PO
+                <Check className="w-3.5 h-3.5" /> Approve Selected Vendor & Generate PO
               </button>
             </div>
           </div>

@@ -3,21 +3,18 @@ import assert from 'node:assert'
 import http from 'node:http'
 import { app, ensureDatabase } from '../app.js'
 
-const BASE_URL = 'http://localhost:5000/api'
+let BASE_URL = ''
 
 describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', () => {
   let serverInstance: http.Server | null = null
 
   before(async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/health`)
-      if (res.ok) return
-    } catch {
-      await ensureDatabase()
-      await new Promise<void>((resolve) => {
-        serverInstance = app.listen(5000, () => resolve())
-      })
-    }
+    await ensureDatabase()
+    await new Promise<void>(resolve => {
+      serverInstance = app.listen(0, '127.0.0.1', () => resolve())
+    })
+    const address = serverInstance!.address() as { port: number }
+    BASE_URL = `http://127.0.0.1:${address.port}/api`
   })
 
   after(async () => {
@@ -33,6 +30,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
   let adminToken = ''
 
   let createdPrId: number = 0
+  let createdPrItemIds: number[] = []
   let createdPrNumber: string = ''
   let createdRfqId: number = 0
   let submittedQuoteId: number = 0
@@ -166,6 +164,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     assert.strictEqual(data.request.items.length, 2)
 
     createdPrId = data.request.id
+    createdPrItemIds = data.request.items.map((item: any) => item.id)
     createdPrNumber = data.request.pr_number
   })
 
@@ -221,11 +220,14 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
   // 7. VENDOR SUBMITS COMPETITIVE QUOTATION
   test('7. Vendor logs in and submits commercial quotation bid', async () => {
     const quotePayload = {
-      unit_price: 240000,
-      subtotal: 480000,
-      tax_amount: 86400,
+      line_items: [
+        { pr_item_id: createdPrItemIds[0], unit_price: 240000 },
+        { pr_item_id: createdPrItemIds[1], unit_price: 40000 },
+      ],
+      subtotal: 640000,
+      tax_amount: 115200,
       discount_amount: 10000,
-      final_amount: 556400,
+      final_amount: 745200,
       delivery_days: 6,
       warranty_years: 3,
       payment_terms: 'Net 30 Days after GRN',
@@ -247,7 +249,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     assert.ok(data.quotation.id)
     assert.ok(data.quotation.quote_number.startsWith('QT-'))
     assert.strictEqual(data.quotation.status, 'submitted')
-    assert.strictEqual(Number(data.quotation.final_amount), 556400)
+    assert.strictEqual(Number(data.quotation.final_amount), 745200)
 
     submittedQuoteId = data.quotation.id
   })
@@ -279,7 +281,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
   })
 
   // 9. PURCHASE ORDER GENERATION
-  test('9. Generates binding Purchase Order from approved quotation', async () => {
+  test('9. Manager approves vendor selection and generates the binding Purchase Order', async () => {
     const poPayload = {
       quote_id: submittedQuoteId,
       expected_delivery: '2026-11-18',
@@ -290,7 +292,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${procurementToken}`,
+        Authorization: `Bearer ${managerToken}`,
       },
       body: JSON.stringify(poPayload),
     })
@@ -300,7 +302,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     assert.ok(data.order.id)
     assert.ok(data.order.po_number.startsWith('PO-'))
     assert.strictEqual(data.order.status, 'issued')
-    assert.strictEqual(Number(data.order.total_amount), 556400)
+    assert.strictEqual(Number(data.order.total_amount), 745200)
 
     createdPoId = data.order.id
   })
@@ -344,10 +346,10 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       po_id: createdPoId,
       received_date: '2026-11-15',
       ordered_qty: 6,
-      received_qty: 6,
-      accepted_qty: 5,
-      rejected_qty: 1,
-      rejection_reason: '1 unit had cable damage during transit. Vendor dispatching replacement.',
+      items: [
+        { pr_item_id: createdPrItemIds[0], received_qty: 2, accepted_qty: 2, rejected_qty: 0 },
+        { pr_item_id: createdPrItemIds[1], received_qty: 4, accepted_qty: 3, rejected_qty: 1, rejection_reason: 'Cable damage; replacement required.' },
+      ],
     }
 
     const res = await fetch(`${BASE_URL}/goods-receipts`, {
@@ -366,12 +368,22 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
     assert.strictEqual(data.goods_receipt.accepted_qty, 5)
     assert.strictEqual(data.goods_receipt.rejected_qty, 1)
 
-    // Verify PO status transitioned to 'delivered'
+    // A rejected item keeps the order outstanding until its replacement is accepted.
     const poRes = await fetch(`${BASE_URL}/purchase-orders/${createdPoId}`, {
       headers: { Authorization: `Bearer ${procurementToken}` },
     })
     const poData = (await poRes.json()) as any
-    assert.strictEqual(poData.order.status, 'delivered')
+    assert.strictEqual(poData.order.status, 'dispatched')
+    const replacement = await fetch(`${BASE_URL}/goods-receipts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${procurementToken}` },
+      body: JSON.stringify({ po_id: createdPoId, received_date: '2026-11-16', items: [{ pr_item_id: createdPrItemIds[1], received_qty: 1, accepted_qty: 1, rejected_qty: 0 }] }),
+    })
+    assert.strictEqual(replacement.status, 201)
+    const delivered = await fetch(`${BASE_URL}/purchase-orders/${createdPoId}`, { headers: { Authorization: `Bearer ${procurementToken}` } }).then(response => response.json()) as any
+    assert.strictEqual(delivered.order.status, 'delivered')
+    const fulfilled = await fetch(`${BASE_URL}/purchase-requests/${createdPrId}`, { headers: { Authorization: `Bearer ${employeeToken}` } }).then(response => response.json()) as any
+    assert.strictEqual(fulfilled.request.status, 'completed')
   })
 
   // 12. VENDOR SUBMITS INVOICE & CORPORATE TREASURY SETTLES PAYMENT
@@ -382,7 +394,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
       invoice_number: `INV-${Date.now().toString().slice(-5)}`,
       invoice_date: '2026-11-15',
       due_date: '2026-12-15',
-      amount: 556400,
+      amount: 745200,
       notes: 'GST Tax Invoice for GPU workstations and displays under PO fulfillment',
     }
 
@@ -401,7 +413,7 @@ describe('ProcureFlow End-to-End Enterprise Procurement Lifecycle Test Suite', (
 
     // Treasury settlement
     const payPayload = {
-      amount: 556400,
+      amount: 745200,
       payment_date: '2026-11-16',
       payment_ref: 'PAY-882910',
       notes: 'NEFT corporate treasury clearing to TechWorld Solutions',

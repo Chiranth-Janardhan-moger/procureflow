@@ -1,201 +1,69 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { api } from '../../services/api'
-import { PurchaseOrder } from '../../types'
+import type { PurchaseOrder } from '../../types'
 import { Modal } from '../../components/common/Modal'
-import { CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react'
 
-interface Props {
-  po: PurchaseOrder | null
-  isOpen: boolean
-  onClose: () => void
-  onRecorded: () => void
-}
-
+interface Props { po: PurchaseOrder | null; isOpen: boolean; onClose: () => void; onRecorded: () => void }
+interface ReceiptInput { pr_item_id: number; received_qty: number; accepted_qty: number; rejected_qty: number; rejection_reason: string }
 export const GoodsReceiptModal: React.FC<Props> = ({ po, isOpen, onClose, onRecorded }) => {
-  const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0])
-  const [orderedQty, setOrderedQty] = useState(10)
-  const [receivedQty, setReceivedQty] = useState(10)
-  const [acceptedQty, setAcceptedQty] = useState(10)
-  const [rejectedQty, setRejectedQty] = useState(0)
-  const [rejectionReason, setRejectionReason] = useState('')
+  const [order, setOrder] = useState<PurchaseOrder | null>(null)
+  const [lines, setLines] = useState<ReceiptInput[]>([])
+  const [receivedDate, setReceivedDate] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  React.useEffect(() => {
-    if (po) {
-      const totalQty = po.items?.reduce((s, i) => s + i.quantity, 0) || 10
-      setOrderedQty(totalQty)
-      setReceivedQty(totalQty)
-      setAcceptedQty(totalQty)
-      setRejectedQty(0)
-      setRejectionReason('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!isOpen || !po) return
+    let cancelled = false
+    setOrder(null); setLines([]); setError(''); setLoading(true); setReceivedDate(new Date().toISOString().slice(0, 10))
+    void api.getPurchaseOrderById(po.id).then(({ order: actual }) => {
+      if (cancelled) return
+      if (actual.status !== 'dispatched') throw new Error('Only dispatched orders with outstanding items can receive goods.')
+      setOrder(actual)
+      setLines((actual.items || []).map((item: any) => ({ pr_item_id: item.id, received_qty: Number(item.remaining_qty), accepted_qty: Number(item.remaining_qty), rejected_qty: 0, rejection_reason: '' })))
+    }).catch(err => { if (!cancelled) setError(err.message || 'Unable to load outstanding quantities.') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [po, isOpen])
+  const change = (id: number, patch: Partial<ReceiptInput>) => setLines(previous => previous.map(line => line.pr_item_id === id ? { ...line, ...patch } : line))
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!order || loading || saving) return
+    const received = lines.filter(line => line.received_qty > 0)
+    if (!received.length || lines.some(line => line.received_qty !== line.accepted_qty + line.rejected_qty || line.accepted_qty < 0 || line.rejected_qty < 0 || (line.rejected_qty > 0 && !line.rejection_reason.trim()))) {
+      setError('Record at least one received unit. Accepted plus rejected must equal received; rejected units need a reason.'); return
     }
-  }, [po])
-
-  const handleReceivedChange = (val: number) => {
-    setReceivedQty(val)
-    setAcceptedQty(val - rejectedQty)
-  }
-
-  const handleRejectedChange = (val: number) => {
-    setRejectedQty(val)
-    setAcceptedQty(Math.max(0, receivedQty - val))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!po) return
-
-    if (acceptedQty + rejectedQty !== receivedQty) {
-      setError('Accepted quantity plus rejected quantity must match total received quantity.')
-      return
-    }
-
-    if (rejectedQty > 0 && !rejectionReason.trim()) {
-      setError('Please provide a reason for the rejected units (e.g. transit damage, spec mismatch).')
-      return
-    }
-
-    setLoading(true)
-    setError(null)
+    setSaving(true); setError('')
     try {
-      await api.createGoodsReceipt({
-        po_id: po.id,
-        received_date: receivedDate,
-        ordered_qty: orderedQty,
-        received_qty: receivedQty,
-        accepted_qty: acceptedQty,
-        rejected_qty: rejectedQty,
-        rejection_reason: rejectionReason || undefined,
-      })
-      onRecorded()
-      onClose()
-    } catch (err: any) {
-      setError(err.message || 'Failed to record Goods Receipt Note')
-    } finally {
-      setLoading(false)
-    }
+      await api.createGoodsReceipt({ po_id: order.id, received_date: receivedDate, items: received })
+      onRecorded(); onClose()
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to record goods receipt.') }
+    finally { setSaving(false) }
   }
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={po ? `Generate Goods Receipt Note (GRN): ${po.po_number}` : 'Goods Receipt Note'}
-      subtitle={po ? `Physical inspection for delivery from ${po.vendor_name}` : ''}
-      maxWidth="lg"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+  const inputClass = 'w-full rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900'
+  return <Modal isOpen={isOpen} onClose={onClose} title={po ? `Record Delivery / GRN: ${po.po_number}` : 'Goods Receipt'} subtitle="Accept delivered items after inspection. Rejected units remain outstanding." maxWidth="2xl">
+    <form onSubmit={submit} className="space-y-4">
+      {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+      {loading && <p>Loading outstanding order quantities...</p>}
+      <label className="block text-xs">Receipt date<input className={inputClass} required type="date" value={receivedDate} onChange={e => setReceivedDate(e.target.value)} /></label>
+      {lines.map(line => {
+        const item = order?.items?.find(candidate => candidate.id === line.pr_item_id)
+        return <div key={line.pr_item_id} className="rounded-xl border p-3 space-y-3">
+          <p className="font-semibold">{item?.item_name}</p>
+          <p className="text-xs">Ordered: {item?.quantity} · Previously accepted: {item?.accepted_qty || 0} · Outstanding: {item?.remaining_qty || 0}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="text-xs">Received now<input className={inputClass} type="number" min="0" max={item?.remaining_qty} step="1" required value={line.received_qty} onChange={e => { const value = Number(e.target.value); change(line.pr_item_id, { received_qty: value, accepted_qty: Math.max(0, value - line.rejected_qty) }) }} /></label>
+            <label className="text-xs">Accepted<input className={inputClass} type="number" min="0" max={line.received_qty} step="1" required value={line.accepted_qty} onChange={e => change(line.pr_item_id, { accepted_qty: Number(e.target.value) })} /></label>
+            <label className="text-xs">Rejected<input className={inputClass} type="number" min="0" max={line.received_qty} step="1" required value={line.rejected_qty} onChange={e => { const value = Number(e.target.value); change(line.pr_item_id, { rejected_qty: value, accepted_qty: Math.max(0, line.received_qty - value) }) }} /></label>
           </div>
-        )}
-
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
-          <div>
-            <span className="text-slate-400 font-semibold uppercase">Vendor Supplier</span>
-            <div className="text-sm font-bold text-slate-800">{po?.vendor_name}</div>
-          </div>
-          <div className="text-right">
-            <span className="text-slate-400 font-semibold uppercase">PO Order Value</span>
-            <div className="text-sm font-mono font-bold text-slate-900">
-              ₹{Number(po?.total_amount).toLocaleString('en-IN')}
-            </div>
-          </div>
+          {line.rejected_qty > 0 && <label className="block text-xs">Rejection reason<textarea className={inputClass} required value={line.rejection_reason} onChange={e => change(line.pr_item_id, { rejection_reason: e.target.value })} /></label>}
         </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Receipt Date</label>
-          <input
-            type="date"
-            required
-            value={receivedDate}
-            onChange={e => setReceivedDate(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Ordered Quantity</label>
-            <input
-              type="number"
-              disabled
-              value={orderedQty}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-500 bg-slate-100 font-mono font-bold"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Actual Received Qty</label>
-            <input
-              type="number"
-              min="1"
-              value={receivedQty}
-              onChange={e => handleReceivedChange(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-800 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
-          <div>
-            <label className="block text-xs font-bold text-emerald-800 uppercase mb-1">Accepted Units</label>
-            <input
-              type="number"
-              min="0"
-              value={acceptedQty}
-              onChange={e => setAcceptedQty(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 rounded-lg border border-emerald-300 text-xs text-emerald-900 font-mono font-bold bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-rose-800 uppercase mb-1">Rejected Units</label>
-            <input
-              type="number"
-              min="0"
-              value={rejectedQty}
-              onChange={e => handleRejectedChange(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 rounded-lg border border-rose-300 text-xs text-rose-900 font-mono font-bold bg-white focus:outline-none focus:ring-2 focus:ring-rose-500"
-            />
-          </div>
-        </div>
-
-        {rejectedQty > 0 && (
-          <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-200 space-y-1.5 animate-in fade-in duration-150">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-              <span>Reason for Rejection</span>
-            </div>
-            <textarea
-              rows={2}
-              required
-              value={rejectionReason}
-              onChange={e => setRejectionReason(e.target.value)}
-              placeholder="e.g. Screen bezel cracked during courier transport. Notified vendor for replacement."
-              className="w-full p-2.5 rounded-lg border border-rose-300 text-xs text-rose-900 bg-white placeholder-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500"
-            />
-          </div>
-        )}
-
-        <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" /> {loading ? 'Recording...' : 'Confirm Goods Receipt (GRN)'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  )
+      })}
+      <p className="rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800">Once every ordered item has been accepted, this order becomes Delivered and the employee purchase request becomes Completed. Invoicing and payment continue separately.</p>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button>
+        <button type="submit" disabled={loading || saving || !lines.length} className="rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-50">{saving ? 'Recording...' : 'Confirm Goods Receipt'}</button>
+      </div>
+    </form>
+  </Modal>
 }

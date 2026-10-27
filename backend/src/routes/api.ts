@@ -1,6 +1,9 @@
 import { Router, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import { Repository } from '../services/repository.js'
+import { getVendorPasswordError } from '../services/vendorCredentials.js'
+import { errorStatus, ensure, managerOf, requestVisibleTo } from '../services/workflowRules.js'
+import { checkPoRead } from '../services/procurementWorkflow.js'
 import { authenticateToken, authorizeRoles, signToken, AuthRequest } from '../middleware/auth.js'
 
 export const apiRouter = Router()
@@ -36,7 +39,7 @@ apiRouter.post('/auth/login', async (req, res: Response) => {
 
     res.json({ token, user: safeUser })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -45,7 +48,7 @@ apiRouter.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Respo
     const user = await Repository.getUserById(req.user!.id)
     res.json({ user })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -69,7 +72,7 @@ apiRouter.post('/auth/demo-switch', async (req, res: Response) => {
     const token = signToken(user)
     res.json({ token, user })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -81,7 +84,7 @@ apiRouter.get('/users', authenticateToken, authorizeRoles('admin'), async (req: 
     const users = await Repository.getAllUsers()
     res.json({ users })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -103,7 +106,7 @@ apiRouter.post('/users', authenticateToken, authorizeRoles('admin'), async (req:
     )
     res.status(201).json({ user: newUser })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -113,7 +116,7 @@ apiRouter.put('/users/:id', authenticateToken, authorizeRoles('admin'), async (r
     if (!updated) return res.status(404).json({ error: 'User not found.' })
     res.json({ user: updated })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -125,7 +128,7 @@ apiRouter.get('/departments', authenticateToken, async (req: AuthRequest, res: R
     const departments = await Repository.getDepartments()
     res.json({ departments })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -136,7 +139,7 @@ apiRouter.post('/departments', authenticateToken, authorizeRoles('admin'), async
     const dept = await Repository.createDepartment({ code, name, manager_id }, req.user!)
     res.status(201).json({ department: dept })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -145,7 +148,7 @@ apiRouter.get('/categories', authenticateToken, async (req: AuthRequest, res: Re
     const categories = await Repository.getCategories()
     res.json({ categories })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -156,7 +159,7 @@ apiRouter.post('/categories', authenticateToken, authorizeRoles('admin', 'procur
     const cat = await Repository.createCategory({ name, description }, req.user!)
     res.status(201).json({ category: cat })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -168,7 +171,7 @@ apiRouter.get('/vendors', authenticateToken, async (req: AuthRequest, res: Respo
     const vendors = await Repository.getVendors()
     res.json({ vendors })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -178,18 +181,20 @@ apiRouter.get('/vendors/:id', authenticateToken, async (req: AuthRequest, res: R
     if (!vendor) return res.status(404).json({ error: 'Vendor not found.' })
     res.json({ vendor })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
 apiRouter.post('/vendors', authenticateToken, authorizeRoles('admin', 'procurement_officer'), async (req: AuthRequest, res: Response) => {
   try {
-    const { name, email, phone, contact_person, address, gst_number, category_id, rating } = req.body
+    const { name, email, password, phone, contact_person, address, gst_number, category_id, rating } = req.body
     if (!name || !email) return res.status(400).json({ error: 'Vendor name and email are required.' })
-    const vendor = await Repository.createVendor({ name, email, phone, contact_person, address, gst_number, category_id, rating }, req.user!)
+    const passwordError = getVendorPasswordError(password)
+    if (passwordError) return res.status(400).json({ error: passwordError })
+    const vendor = await Repository.createVendor({ name, email, password, phone, contact_person, address, gst_number, category_id, rating }, req.user!)
     res.status(201).json({ vendor })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -201,6 +206,8 @@ apiRouter.get('/purchase-requests', authenticateToken, async (req: AuthRequest, 
     const { status } = req.query as { status?: string }
     let filters: any = { status }
 
+    ensure(['employee', 'manager', 'procurement_officer', 'admin'].includes(req.user!.role), 'You cannot access purchase requests.', 403)
+    if (req.user!.role === 'manager') ensure(req.user!.department_id, 'Manager department is not configured.', 403)
     // Role-based visibility
     if (req.user!.role === 'employee') {
       filters.userId = req.user!.id
@@ -211,7 +218,7 @@ apiRouter.get('/purchase-requests', authenticateToken, async (req: AuthRequest, 
     const requests = await Repository.getPurchaseRequests(filters)
     res.json({ requests })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -219,9 +226,10 @@ apiRouter.get('/purchase-requests/:id', authenticateToken, async (req: AuthReque
   try {
     const pr = await Repository.getPurchaseRequestById(parseInt(req.params.id, 10))
     if (!pr) return res.status(404).json({ error: 'Purchase request not found.' })
+    requestVisibleTo(req.user!, pr)
     res.json({ request: pr })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -235,14 +243,14 @@ apiRouter.post('/purchase-requests', authenticateToken, authorizeRoles('employee
     const newPr = await Repository.createPurchaseRequest({ required_date, priority, purpose, items, status }, req.user!)
     res.status(201).json({ request: newPr })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
-apiRouter.patch('/purchase-requests/:id/status', authenticateToken, authorizeRoles('manager', 'admin', 'procurement_officer'), async (req: AuthRequest, res: Response) => {
+apiRouter.patch('/purchase-requests/:id/status', authenticateToken, authorizeRoles('employee', 'manager'), async (req: AuthRequest, res: Response) => {
   try {
     const { status, remarks } = req.body
-    if (!['approved', 'rejected', 'in_procurement', 'completed'].includes(status)) {
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status.' })
     }
 
@@ -250,7 +258,7 @@ apiRouter.patch('/purchase-requests/:id/status', authenticateToken, authorizeRol
     if (!updated) return res.status(404).json({ error: 'Purchase request not found.' })
     res.json({ request: updated })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -267,10 +275,13 @@ apiRouter.get('/rfqs', authenticateToken, async (req: AuthRequest, res: Response
       if (vendor) filters.vendorId = vendor.id
     }
 
-    const rfqs = await Repository.getRfqs(filters)
+    ensure(['vendor', 'manager', 'procurement_officer', 'admin'].includes(req.user!.role), 'You cannot access RFQs.', 403)
+    if (req.user!.role === 'vendor' && !filters.vendorId) return res.json({ rfqs: [] })
+    let rfqs = await Repository.getRfqs(filters)
+    if (req.user!.role === 'manager') rfqs = rfqs.filter(rfq => rfq.department_id === req.user!.department_id)
     res.json({ rfqs })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -278,9 +289,18 @@ apiRouter.get('/rfqs/:id', authenticateToken, async (req: AuthRequest, res: Resp
   try {
     const rfq = await Repository.getRfqById(parseInt(req.params.id, 10))
     if (!rfq) return res.status(404).json({ error: 'RFQ not found.' })
+    if (req.user!.role === 'vendor') {
+      const vendor = await Repository.getVendorByUserId(req.user!.id)
+      ensure(vendor && rfq.invited_vendors.some((invited: any) => invited.id === vendor.id), 'You are not invited to this RFQ.', 403)
+      rfq.quotations = rfq.quotations.filter((quote: any) => quote.vendor_id === vendor.id)
+      rfq.invited_vendors = rfq.invited_vendors.filter((invited: any) => invited.id === vendor.id)
+    } else {
+      ensure(['manager', 'procurement_officer', 'admin'].includes(req.user!.role), 'You cannot access RFQs.', 403)
+      if (req.user!.role === 'manager') managerOf(req.user!, (await Repository.getPurchaseRequestById(rfq.pr_id))!)
+    }
     res.json({ rfq })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -294,17 +314,17 @@ apiRouter.post('/rfqs', authenticateToken, authorizeRoles('procurement_officer',
     const newRfq = await Repository.createRfq({ pr_id, title, deadline, expected_delivery_date, terms, vendor_ids }, req.user!)
     res.status(201).json({ rfq: newRfq })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
-apiRouter.post('/rfqs/:id/quotes', authenticateToken, authorizeRoles('vendor', 'admin'), async (req: AuthRequest, res: Response) => {
+apiRouter.post('/rfqs/:id/quotes', authenticateToken, authorizeRoles('vendor'), async (req: AuthRequest, res: Response) => {
   try {
     const rfq_id = parseInt(req.params.id, 10)
     const quote = await Repository.submitQuotation({ ...req.body, rfq_id }, req.user!)
     res.status(201).json({ quotation: quote })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -315,13 +335,20 @@ apiRouter.post('/rfqs/quotes/:quoteId/recommend', authenticateToken, authorizeRo
     await Repository.recommendQuotation(parseInt(req.params.quoteId, 10), reason, req.user!)
     res.json({ success: true, message: 'Vendor recommendation submitted for Manager approval.' })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
 // -------------------------------------------------------------
 // PURCHASE ORDERS
 // -------------------------------------------------------------
+apiRouter.post('/rfqs/:id/return-recommendation', authenticateToken, authorizeRoles('manager'), async (req: AuthRequest, res: Response) => {
+  try {
+    const rfq = await Repository.returnVendorRecommendation(Number(req.params.id), req.body.reason, req.user!)
+    res.json({ rfq })
+  } catch (err: any) { res.status(errorStatus(err)).json({ error: err.message }) }
+})
+
 apiRouter.get('/purchase-orders', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { status } = req.query as { status?: string }
@@ -332,10 +359,13 @@ apiRouter.get('/purchase-orders', authenticateToken, async (req: AuthRequest, re
       if (vendor) filters.vendorId = vendor.id
     }
 
-    const orders = await Repository.getPurchaseOrders(filters)
+    ensure(['vendor', 'manager', 'procurement_officer', 'admin'].includes(req.user!.role), 'You cannot access the order list.', 403)
+    if (req.user!.role === 'vendor' && !filters.vendorId) return res.json({ orders: [] })
+    let orders = await Repository.getPurchaseOrders(filters)
+    if (req.user!.role === 'manager') orders = orders.filter(order => order.department_id === req.user!.department_id)
     res.json({ orders })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -343,27 +373,28 @@ apiRouter.get('/purchase-orders/:id', authenticateToken, async (req: AuthRequest
   try {
     const po = await Repository.getPurchaseOrderById(parseInt(req.params.id, 10))
     if (!po) return res.status(404).json({ error: 'Purchase Order not found.' })
+    await checkPoRead(po, req.user!)
     res.json({ order: po })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
-apiRouter.post('/purchase-orders', authenticateToken, authorizeRoles('procurement_officer', 'admin', 'manager'), async (req: AuthRequest, res: Response) => {
+apiRouter.post('/purchase-orders', authenticateToken, authorizeRoles('manager'), async (req: AuthRequest, res: Response) => {
   try {
-    const { quote_id, expected_delivery, delivery_address, payment_terms } = req.body
+    const { quote_id, expected_delivery, delivery_address, payment_terms, selection_reason } = req.body
     if (!quote_id || !expected_delivery) {
       return res.status(400).json({ error: 'Quote ID and expected delivery date are required.' })
     }
 
-    const po = await Repository.createPurchaseOrderFromQuotation({ quote_id, expected_delivery, delivery_address, payment_terms }, req.user!)
+    const po = await Repository.createPurchaseOrderFromQuotation({ quote_id, expected_delivery, delivery_address, payment_terms, selection_reason }, req.user!)
     res.status(201).json({ order: po })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
-apiRouter.patch('/purchase-orders/:id/status', authenticateToken, async (req: AuthRequest, res: Response) => {
+apiRouter.patch('/purchase-orders/:id/status', authenticateToken, authorizeRoles('vendor'), async (req: AuthRequest, res: Response) => {
   try {
     const { status, dispatch_date, courier_name, tracking_ref } = req.body
     const po = await Repository.updatePurchaseOrderStatus(
@@ -374,7 +405,7 @@ apiRouter.patch('/purchase-orders/:id/status', authenticateToken, async (req: Au
     if (!po) return res.status(404).json({ error: 'Purchase Order not found.' })
     res.json({ order: po })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -383,18 +414,10 @@ apiRouter.patch('/purchase-orders/:id/status', authenticateToken, async (req: Au
 // -------------------------------------------------------------
 apiRouter.post('/goods-receipts', authenticateToken, authorizeRoles('procurement_officer', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
-    const { po_id, received_date, ordered_qty, received_qty, accepted_qty, rejected_qty, rejection_reason } = req.body
-    if (!po_id || !received_date || ordered_qty === undefined || received_qty === undefined || accepted_qty === undefined) {
-      return res.status(400).json({ error: 'PO ID, received date, and quantities are required.' })
-    }
-
-    const grn = await Repository.createGoodsReceipt(
-      { po_id, received_date, ordered_qty, received_qty, accepted_qty, rejected_qty, rejection_reason },
-      req.user!
-    )
+    const grn = await Repository.createGoodsReceipt(req.body, req.user!)
     res.status(201).json({ goods_receipt: grn })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -411,14 +434,23 @@ apiRouter.get('/invoices', authenticateToken, async (req: AuthRequest, res: Resp
       if (vendor) filters.vendorId = vendor.id
     }
 
-    const invoices = await Repository.getInvoices(filters)
+    ensure(['vendor', 'manager', 'procurement_officer', 'admin'].includes(req.user!.role), 'You cannot access invoices.', 403)
+    if (req.user!.role === 'vendor' && !filters.vendorId) return res.json({ invoices: [] })
+    let invoices = await Repository.getInvoices(filters)
+    if (req.user!.role === 'manager') {
+      const visibility = await Promise.all(invoices.map(async invoice => {
+        const po = await Repository.getPurchaseOrderById(invoice.po_id)
+        return po?.department_id === req.user!.department_id
+      }))
+      invoices = invoices.filter((_, index) => visibility[index])
+    }
     res.json({ invoices })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
-apiRouter.post('/invoices', authenticateToken, authorizeRoles('vendor', 'admin'), async (req: AuthRequest, res: Response) => {
+apiRouter.post('/invoices', authenticateToken, authorizeRoles('vendor'), async (req: AuthRequest, res: Response) => {
   try {
     const { po_id, invoice_number, invoice_date, due_date, amount, notes } = req.body
     if (!po_id || !invoice_date || !due_date || !amount) {
@@ -428,7 +460,7 @@ apiRouter.post('/invoices', authenticateToken, authorizeRoles('vendor', 'admin')
     const invoice = await Repository.submitInvoice({ po_id, invoice_number, invoice_date, due_date, amount, notes }, req.user!)
     res.status(201).json({ invoice })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -445,7 +477,7 @@ apiRouter.post('/invoices/:id/pay', authenticateToken, authorizeRoles('procureme
     )
     res.status(201).json({ payment })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -457,16 +489,16 @@ apiRouter.get('/notifications', authenticateToken, async (req: AuthRequest, res:
     const notifications = await Repository.getNotifications(req.user!.id, req.user!.role)
     res.json({ notifications })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
 apiRouter.patch('/notifications/:id/read', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    await Repository.markNotificationRead(parseInt(req.params.id, 10))
+    await Repository.markNotificationRead(parseInt(req.params.id, 10), req.user!)
     res.json({ success: true })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -475,7 +507,7 @@ apiRouter.get('/audit-logs', authenticateToken, authorizeRoles('admin', 'procure
     const logs = await Repository.getAuditLogs(100)
     res.json({ logs })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })
 
@@ -487,6 +519,6 @@ apiRouter.get('/analytics/dashboard', authenticateToken, async (req: AuthRequest
     const analytics = await Repository.getDashboardAnalytics(req.user!)
     res.json({ analytics })
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(errorStatus(err)).json({ error: err.message })
   }
 })

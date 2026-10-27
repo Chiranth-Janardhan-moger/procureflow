@@ -9,7 +9,6 @@ import {
   Zap,
   Star,
   CheckCircle,
-  ArrowRight,
   ShieldCheck,
   Building2,
   Calendar,
@@ -18,11 +17,11 @@ import {
 } from 'lucide-react'
 
 interface Props {
-  rfqId?: number
-  onNavigateToPo?: (poId: number) => void
+  rfqId: number
+  onBack: () => void
 }
 
-export const QuotationComparisonPage: React.FC<Props> = ({ rfqId = 1, onNavigateToPo }) => {
+export const QuotationComparisonPage: React.FC<Props> = ({ rfqId, onBack }) => {
   const [rfq, setRfq] = useState<RFQ | null>(null)
   const [loading, setLoading] = useState(true)
   const [recommendModalOpen, setRecommendModalOpen] = useState(false)
@@ -36,6 +35,7 @@ export const QuotationComparisonPage: React.FC<Props> = ({ rfqId = 1, onNavigate
 
   const loadRfq = async (id: number) => {
     setLoading(true)
+    setRfq(null)
     try {
       const res = await api.getRfqById(id)
       setRfq(res.rfq)
@@ -47,6 +47,7 @@ export const QuotationComparisonPage: React.FC<Props> = ({ rfqId = 1, onNavigate
   }
 
   const quotes = rfq?.quotations || []
+  const quotedQuantity = rfq?.items?.reduce((sum, item) => sum + Number(item.quantity), 0) ?? null
 
   // Auto-calculated analytical badges
   const lowestPriceQuote = quotes.length
@@ -84,32 +85,18 @@ export const QuotationComparisonPage: React.FC<Props> = ({ rfqId = 1, onNavigate
     }
   }
 
-  const handleGeneratePo = async (q: Quotation) => {
-    setSubmitting(true)
-    try {
-      const res = await api.createPurchaseOrder({
-        quote_id: q.id,
-        expected_delivery: rfq?.expected_delivery_date || '2026-11-05',
-      })
-      alert(`Purchase Order ${res.order.po_number} generated successfully!`)
-      if (onNavigateToPo) onNavigateToPo(res.order.id)
-    } catch (err: any) {
-      alert(err.message || 'Failed to create PO')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
+  const backButton = <button type="button" onClick={onBack} className="text-sm font-semibold text-indigo-600 hover:underline">← Back to Procurement Dashboard</button>
   if (loading) {
-    return <div className="py-20 text-center text-xs text-slate-400">Loading quotation comparative matrix...</div>
+    return <div className="space-y-4">{backButton}<p className="py-16 text-center text-xs text-slate-400">Loading quotation comparative matrix...</p></div>
   }
 
   if (!rfq) {
-    return <div className="py-20 text-center text-xs text-slate-400">RFQ data not found.</div>
+    return <div className="space-y-4">{backButton}<p className="py-16 text-center text-xs text-slate-400">The selected RFQ could not be loaded. Return to the dashboard and choose an active RFQ.</p></div>
   }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      {backButton}
       {/* Title & Context */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -250,17 +237,19 @@ export const QuotationComparisonPage: React.FC<Props> = ({ rfqId = 1, onNavigate
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {/* Unit Price */}
               <tr className="hover:bg-slate-50/60">
-                <td className="p-4 font-bold text-slate-900 bg-slate-50/30">Unit Price</td>
+                <td className="p-4 font-bold text-slate-900 bg-slate-50/30">Quoted Item Prices</td>
                 {quotes.map(q => (
                   <td key={q.id} className="p-4 font-mono font-bold text-sm text-slate-900">
-                    ₹{Number(q.unit_price).toLocaleString('en-IN')}
+                    {q.line_items?.length ? q.line_items.map(line => (
+                      <p key={line.pr_item_id} className="mb-1 text-xs">{line.item_name}: {line.quantity} × ₹{Number(line.unit_price).toLocaleString('en-IN')}</p>
+                    )) : `₹${Number(q.unit_price).toLocaleString('en-IN')}`}
                   </td>
                 ))}
               </tr>
 
               {/* Subtotal */}
               <tr className="hover:bg-slate-50/60">
-                <td className="p-4 font-semibold text-slate-600 bg-slate-50/30">Subtotal (10 units)</td>
+                <td className="p-4 font-semibold text-slate-600 bg-slate-50/30">Subtotal{quotedQuantity !== null ? ` (${quotedQuantity} ${quotedQuantity === 1 ? 'unit' : 'units'})` : ''}</td>
                 {quotes.map(q => (
                   <td key={q.id} className="p-4 font-mono text-slate-700">
                     ₹{Number(q.subtotal).toLocaleString('en-IN')}
@@ -270,7 +259,7 @@ export const QuotationComparisonPage: React.FC<Props> = ({ rfqId = 1, onNavigate
 
               {/* Tax & GST */}
               <tr className="hover:bg-slate-50/60">
-                <td className="p-4 font-semibold text-slate-600 bg-slate-50/30">GST / Tax Amount (18%)</td>
+                <td className="p-4 font-semibold text-slate-600 bg-slate-50/30">GST / Tax Amount</td>
                 {quotes.map(q => (
                   <td key={q.id} className="p-4 font-mono text-slate-600">
                     ₹{Number(q.tax_amount).toLocaleString('en-IN')}
@@ -351,18 +340,16 @@ export const QuotationComparisonPage: React.FC<Props> = ({ rfqId = 1, onNavigate
                       <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-xs bg-emerald-100 px-3 py-1.5 rounded-lg">
                         <CheckCircle className="w-4 h-4" /> Selected & PO Issued
                       </span>
+                    ) : ['closed', 'cancelled'].includes(rfq.status) ? (
+                      <span className="text-xs text-slate-500">Not selected</span>
                     ) : q.is_recommended ? (
                       <div className="space-y-1.5">
                         <span className="inline-flex items-center gap-1 text-purple-700 font-bold text-xs bg-purple-100 px-2.5 py-1 rounded-md">
                           <CheckCircle className="w-3.5 h-3.5" /> Recommended
                         </span>
-                        <button
-                          onClick={() => handleGeneratePo(q)}
-                          disabled={submitting}
-                          className="w-full mt-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-1"
-                        >
-                          Generate PO Now <ArrowRight className="w-3 h-3" />
-                        </button>
+                        <p className="mt-1 text-xs font-semibold text-amber-700">
+                          Awaiting manager approval
+                        </p>
                       </div>
                     ) : (
                       <button

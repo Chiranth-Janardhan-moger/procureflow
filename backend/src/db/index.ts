@@ -132,9 +132,9 @@ export async function initDatabase(): Promise<DBClient> {
       isConnectedToPostgres = false
     }
   } else {
-    console.log('[ProcureFlow DB] No DATABASE_URL configured in server/.env.')
+    console.log('[ProcureFlow DB] No DATABASE_URL configured in backend/.env.')
     console.log('[ProcureFlow DB] Running in Local Memory Mode with complete demo datasets.')
-    console.log('[ProcureFlow DB] To connect your Neon PostgreSQL database, add your connection string to server/.env:')
+    console.log('[ProcureFlow DB] To connect your Neon PostgreSQL database, add your connection string to backend/.env:')
     console.log('                 DATABASE_URL=postgresql://user:pass@ep-name.region.aws.neon.tech/neondb?sslmode=require\n')
   }
 
@@ -276,6 +276,9 @@ async function seedPostgres(client: pg.Pool) {
       [log.id, log.user_id, log.user_name, log.user_role, log.action, log.entity_type, log.entity_id, log.details, log.ip_address]
     )
   }
+
+  for (const quote of initialQuotations) await client.query('UPDATE quotations SET line_items = $1::jsonb WHERE id = $2', [JSON.stringify(quote.line_items), quote.id])
+  for (const receipt of initialGoodsReceipts) await client.query('UPDATE goods_receipts SET items = $1::jsonb WHERE id = $2', [JSON.stringify(receipt.items), receipt.id])
 
   // Advance sequences
   const tables = ['departments', 'categories', 'users', 'vendors', 'purchase_requests', 'pr_items', 'rfqs', 'rfq_vendors', 'quotations', 'purchase_orders', 'goods_receipts', 'invoices', 'payments', 'notifications', 'audit_logs']

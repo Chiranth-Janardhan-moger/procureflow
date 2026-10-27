@@ -58,7 +58,7 @@ export const PurchaseRequestDetailsModal: React.FC<Props> = ({
       },
       {
         title: isRejected ? 'Manager Rejected' : 'Manager Review',
-        subtitle: req.manager_remarks || (isApproved ? 'Approved by Anita Roy' : 'Awaiting review'),
+        subtitle: req.manager_remarks || (isApproved ? 'Approved by department manager' : 'Awaiting review'),
         date: req.updated_at ? new Date(req.updated_at).toLocaleDateString() : null,
         status: isRejected ? 'rejected' : isApproved ? 'completed' : 'current',
       },
@@ -70,7 +70,7 @@ export const PurchaseRequestDetailsModal: React.FC<Props> = ({
       },
       {
         title: 'Goods Received & Closed',
-        subtitle: isCompleted ? 'GRN inspected & items delivered' : 'Fulfillment & payment',
+        subtitle: isCompleted ? 'GRN inspected & items delivered' : 'Awaiting full accepted delivery',
         status: isCompleted ? 'completed' : 'upcoming',
       },
     ]
