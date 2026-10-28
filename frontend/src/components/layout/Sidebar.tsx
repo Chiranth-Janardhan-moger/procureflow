@@ -115,19 +115,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           </div>
         )}
       </div>
-
-      {/* Database connection badge at bottom */}
-      <div className="p-3.5 border-t border-slate-800/90 bg-slate-950/40">
-        <div className="px-3 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-[11px]">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-bold text-slate-200">Database Engine</span>
-          </div>
-          <p className="text-slate-400 mt-1 text-[10px] leading-relaxed">
-            PostgreSQL on Neon ready. Seamless fallback activated.
-          </p>
-        </div>
-      </div>
     </aside>
   )
 }
