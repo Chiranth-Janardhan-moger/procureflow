@@ -23,6 +23,15 @@ export const LoginPage: React.FC = () => {
     }
   }
 
+  const handleDemoSwitch = async (role: UserRole) => {
+    setError(null)
+    try {
+      await switchRole(role)
+    } catch (err: any) {
+      setError(err.message || 'Demo login failed')
+    }
+  }
+
   const demoAccounts: Array<{ label: string; role: UserRole; email: string; pass: string; dept: string }> = [
     { label: 'Employee', role: 'employee', email: 'rahul@company.com', pass: 'password123', dept: 'IT Tech' },
     { label: 'Manager', role: 'manager', email: 'anita@company.com', pass: 'password123', dept: 'IT Approvals' },
@@ -106,7 +115,7 @@ export const LoginPage: React.FC = () => {
                 <button
                   key={demo.role}
                   type="button"
-                  onClick={() => switchRole(demo.role)}
+                  onClick={() => handleDemoSwitch(demo.role)}
                   className="text-left p-2.5 rounded-xl bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/50 transition-all group cursor-pointer"
                 >
                   <div className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">

@@ -89,31 +89,9 @@ The repository includes a GitHub Actions pipeline configured in `.github/workflo
 ### Pipeline Stages
 
 1. Dependency Security Audit: Scans dependencies for security vulnerabilities.
-2. Code Quality & Type Checking: Validates strict TypeScript types across both frontend and backend modules (`client/tsconfig.json` and `server/tsconfig.json`).
+2. Code Quality & Type Checking: Validates strict TypeScript types across both frontend and backend modules (`frontend/tsconfig.json` and `backend/tsconfig.json`).
 3. Integration & E2E Testing: Boots a background test instance of the API server and executes the 14-point procurement lifecycle test suite (`npm test`).
 4. Production Build Verification: Compiles optimized static production assets via Vite and TypeScript server output.
-5. Vercel Automated Deployment: Deploys verified builds to Vercel production.
-
-## Vercel Deployment
-
-ProcureFlow is pre-configured for Vercel deployment with `vercel.json` and a serverless API handler in `api/index.ts`.
-
-### Deployment Options
-
-1. Automatic Git Integration (Recommended):
-   - Import the repository in the Vercel dashboard: https://vercel.com/new/import?s=https://github.com/Chiranth-Janardhan-moger/procureflow
-   - Framework Preset: Vite
-   - Root Directory: `./`
-   - Build Command: `npm run build`
-   - Output Directory: `client/dist`
-   - Add environment variables in the Vercel project settings (`DATABASE_URL`, `JWT_SECRET`).
-
-2. GitHub Actions Deployment:
-   - Configure repository secrets in GitHub:
-     - `VERCEL_TOKEN`: Your personal Vercel access token
-     - `VERCEL_ORG_ID`: Your Vercel organization ID
-     - `VERCEL_PROJECT_ID`: Your Vercel project ID
-   - Pushes to `main` will trigger automated deployment via the GitHub Actions workflow.
 
 ## Demo Credentials
 

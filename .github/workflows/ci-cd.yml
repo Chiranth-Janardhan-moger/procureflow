@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Code Quality, Testing & Vercel Deployment
+name: CI/CD Pipeline - Code Quality & Testing
 
 on:
   push:
@@ -42,52 +42,3 @@ jobs:
 
       - name: Execute End-to-End Procurement Lifecycle Tests
         run: npm run test --prefix backend
-
-  deploy-vercel:
-    name: Deploy to Vercel
-    needs: [code-quality-and-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js Runtime
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install Dependencies & Build
-        run: |
-          npm install
-          npm install --prefix frontend
-          npm install --prefix backend
-          npm run build
-
-      - name: Deploy to Vercel (Production)
-        uses: amondnet/vercel-action@v25
-        if: env.VERCEL_TOKEN != ''
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-
-      - name: Vercel Direct Integration Notice
-        if: env.VERCEL_TOKEN == ''
-        run: |
-          echo "=========================================================================="
-          echo " VERCEL DEPLOYMENT CONFIGURATION"
-          echo "=========================================================================="
-          echo " Vercel automatic git deployments are enabled via vercel.json."
-          echo " If using the Vercel GitHub App, your repository is automatically"
-          echo " deployed on every push to main at:"
-          echo " https://vercel.com/new/import?s=https://github.com/Chiranth-Janardhan-moger/procureflow"
-          echo ""
-          echo " To enable GitHub Actions-based deployments directly:"
-          echo " Set VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID in repository secrets."
-          echo "=========================================================================="
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
