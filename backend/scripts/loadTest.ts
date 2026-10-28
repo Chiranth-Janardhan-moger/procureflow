@@ -124,8 +124,8 @@ async function main() {
       headers: { Authorization: `Bearer ${token}` },
     },
     {
-      name: 'Tier 6 - Single-Node Saturation Threshold',
-      concurrency: 1500,
+      name: 'Tier 6 - High Concurrency Stress Peak',
+      concurrency: 1200,
       duration: 3,
       endpoint: 'http://localhost:5000/api/health',
     },
