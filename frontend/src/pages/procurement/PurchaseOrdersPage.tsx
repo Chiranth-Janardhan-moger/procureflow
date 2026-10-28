@@ -108,10 +108,10 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-            Purchase Orders & Delivery Fulfillment
+            Purchase Orders & Delivery
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Track order issuance, vendor dispatch status, courier consignments, and goods receipt inspections (GRN).
+            Track order issuance, vendor dispatches, and goods receipts.
           </p>
         </div>
 

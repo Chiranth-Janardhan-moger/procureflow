@@ -107,10 +107,10 @@ export const UserManagementPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-            User Directory & Access Control
+            User Management
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Enterprise identity management. Public signups are disabled; internal accounts are provisioned by Admin.
+            Manage user accounts, roles, and department assignments.
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export const UserManagementPage: React.FC = () => {
           }}
           className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer inline-flex items-center gap-2"
         >
-          <UserPlus className="w-4 h-4" /> Provision New User
+          <UserPlus className="w-4 h-4" /> Add User
         </button>
       </div>
 

@@ -82,7 +82,7 @@ export const Navbar: React.FC = () => {
                 Enterprise
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 dark:text-slate-400 font-medium hidden sm:block">Procurement & Vendor Lifecycle Platform</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Procurement Management</p>
           </div>
         </div>
       </div>
@@ -111,7 +111,7 @@ export const Navbar: React.FC = () => {
             <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200/90 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-800">
                 <p className="text-xs font-bold text-slate-900 dark:text-white">Switch Demo Persona</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Explore the full procurement journey across all 5 roles</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Select a role to test workflows</p>
               </div>
               <div className="p-1 space-y-1">
                 {demoRoles.map(item => {
@@ -179,7 +179,7 @@ export const Navbar: React.FC = () => {
             <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200/90 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">Notifications & Workflow Alerts</h4>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">Notifications</h4>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400">{unreadCount} unread actions</p>
                 </div>
               </div>

@@ -107,10 +107,10 @@ export const QuotationComparisonPage: React.FC<Props> = ({ rfqId, onBack }) => {
             <Badge status={rfq.status} size="sm" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-            Quotation Comparison Matrix
+            Quotation Comparison
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Cross-evaluate vendor proposals side-by-side on price, delivery speed, warranty, and reputation.
+            Compare vendor quotes on price, delivery time, and warranty.
           </p>
         </div>
 

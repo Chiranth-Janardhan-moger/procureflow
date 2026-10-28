@@ -148,7 +148,7 @@ export const CreatePurchaseRequest: React.FC<Props> = ({ onBack, onCreated }) =>
           </button>
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Create Purchase Request</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Submit new equipment or service requisition for manager approval and procurement.
+            Submit a new request for approval and procurement.
           </p>
         </div>
 

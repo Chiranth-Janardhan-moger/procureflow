@@ -73,10 +73,10 @@ export const EmployeeDashboard: React.FC<Props> = ({ onCreateRequest }) => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-            Employee Purchase Workspace
+            Employee Purchases
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Raise procurement requirements, track approvals, and view fulfillment milestones.
+            Create and track purchase requests.
           </p>
         </div>
 
@@ -93,35 +93,35 @@ export const EmployeeDashboard: React.FC<Props> = ({ onCreateRequest }) => {
         <StatCard
           title="Total Requests"
           value={total}
-          subtitle="All requisitions"
+          subtitle="All time"
           icon={FileText}
           color="indigo"
         />
         <StatCard
           title="Pending Approval"
           value={pending}
-          subtitle="With Dept Manager"
+          subtitle="Awaiting approval"
           icon={Clock}
           color="amber"
         />
         <StatCard
           title="In Procurement"
           value={approved}
-          subtitle="RFQ & Sourcing"
+          subtitle="In progress"
           icon={CheckCircle2}
           color="sky"
         />
         <StatCard
           title="Fulfilled"
           value={completed}
-          subtitle="Delivered & Closed"
+          subtitle="Completed"
           icon={CheckCircle2}
           color="emerald"
         />
         <StatCard
           title="Rejected"
           value={rejected}
-          subtitle="Review remarks"
+          subtitle="Declined"
           icon={XCircle}
           color="rose"
         />

@@ -108,10 +108,10 @@ export const VendorDirectoryPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-            Vendor Directory & Supplier Network
+            Vendor Directory
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Maintain approved vendors, commercial details, GST compliance, and supplier performance metrics.
+            Maintain registered vendors and contact details.
           </p>
         </div>
 
@@ -119,7 +119,7 @@ export const VendorDirectoryPage: React.FC = () => {
           onClick={() => setModalOpen(true)}
           className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer inline-flex items-center gap-2"
         >
-          <Plus className="w-4 h-4" /> Onboard New Vendor
+          <Plus className="w-4 h-4" /> Add Vendor
         </button>
       </div>
 

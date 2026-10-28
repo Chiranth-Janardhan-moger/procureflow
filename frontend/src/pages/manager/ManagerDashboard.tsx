@@ -150,10 +150,10 @@ export const ManagerDashboard: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-          Manager Approval Console
+          Manager Approvals
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Review department purchase requisitions, approve budgets, and sign off on recommended vendor bids.
+          Review and approve purchase requests.
         </p>
       </div>
 

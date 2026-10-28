@@ -80,10 +80,10 @@ export const DepartmentCategoryPage: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-200">
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-          Departments & Purchasing Categories
+          Departments & Categories
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Configure organizational cost centers and procurement catalog classifications.
+          Manage organizational departments and item categories.
         </p>
       </div>
 
@@ -94,7 +94,7 @@ export const DepartmentCategoryPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Building className="w-4 h-4 text-indigo-600" />
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Cost Centers ({departments.length})
+                Departments ({departments.length})
               </h2>
             </div>
             <button

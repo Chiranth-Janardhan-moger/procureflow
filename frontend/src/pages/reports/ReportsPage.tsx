@@ -80,10 +80,10 @@ export const ReportsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-            Procurement Reports & Intelligence
+            Reports & Analytics
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Aggregated expenditure summaries, category distribution, supplier reliability metrics, and CSV export.
+            Spending summaries, supplier metrics, and CSV export.
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export const ReportsPage: React.FC = () => {
           onClick={exportCsv}
           className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md transition-all cursor-pointer inline-flex items-center gap-2"
         >
-          <Download className="w-4 h-4 text-indigo-400" /> Export Procurement CSV
+          <Download className="w-4 h-4 text-indigo-400" /> Export CSV
         </button>
       </div>
 

@@ -46,15 +46,15 @@ export const AuditLogsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-emerald-600" /> WORM Immutable Compliance
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-slate-500" /> Audit Trail Log
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-            Enterprise Audit Trail
+            Audit Trail
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Cryptographically timestamped audit log of all purchase requisitions, approvals, tenders, and payments.
+            Log of all purchase requests, approvals, tenders, and payments.
           </p>
         </div>
 

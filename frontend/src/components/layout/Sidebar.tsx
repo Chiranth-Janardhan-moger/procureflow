@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           { id: 'dashboard', label: 'User Management', icon: Users },
           { id: 'departments', label: 'Departments & Categories', icon: Tags },
           { id: 'vendors', label: 'Vendor Directory', icon: Building2 },
-          { id: 'audit-logs', label: 'Audit Trail (Immutable)', icon: History },
+          { id: 'audit-logs', label: 'Audit Trail', icon: History },
           { id: 'reports', label: 'System Reports', icon: PieChart },
         ]
 
@@ -56,12 +56,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
   const menuItems = getMenuItems()
 
   return (
-    <aside className="w-64 bg-slate-900 dark:bg-slate-950 border-r border-slate-800 dark:border-slate-800/80 flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)] transition-colors">
+    <aside className="w-64 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)] transition-colors">
       {/* Navigation list */}
       <div className="p-3.5 space-y-6">
         <div>
-          <div className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            {user.role === 'vendor' ? 'Vendor Partner Space' : `${user.role.replace('_', ' ')} workspace`}
+          <div className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            {user.role === 'vendor' ? 'Vendor Portal' : `${user.role.replace('_', ' ')} workspace`}
           </div>
 
           <nav className="space-y-1">
@@ -74,14 +74,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                   onClick={() => onNavigate(item.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      ? 'bg-indigo-600 text-white shadow-sm'
                       : item.highlight
-                      ? 'text-indigo-400 hover:bg-slate-800/80 hover:text-white font-bold'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      ? 'text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-900 font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.highlight ? 'text-indigo-400' : 'text-slate-400'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.highlight ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
                     <span>{item.label}</span>
                   </div>
                   {item.highlight && !isActive && (
@@ -96,8 +96,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         {/* Common reports link for internal users */}
         {user.role !== 'vendor' && !menuItems.some(item => item.id === 'reports') && (
           <div>
-            <div className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Intelligence
+            <div className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Analytics
             </div>
             <nav className="space-y-1">
               <button
@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentView === 'reports'
                     ? 'bg-indigo-600 text-white font-semibold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900'
                 }`}
               >
                 <PieChart className="w-4 h-4 text-slate-400" />

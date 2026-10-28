@@ -138,10 +138,10 @@ export const VendorDashboard: React.FC = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-sans">
-          Vendor Partner Portal
+          Vendor Portal
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Review invited tender RFQs, submit competitive quotations, confirm orders, and dispatch shipments.
+          View tenders, submit quotes, and manage orders.
         </p>
       </div>
 
