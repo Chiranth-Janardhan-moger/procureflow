@@ -64,7 +64,7 @@ export const CreatePurchaseRequest: React.FC<Props> = ({ onBack, onCreated }) =>
     setItems(prev => [
       ...prev,
       {
-        id: Math.random().toString(),
+        id: crypto.randomUUID(),
         item_name: '',
         category: categories[0]?.name || 'IT Equipment',
         quantity: 1,

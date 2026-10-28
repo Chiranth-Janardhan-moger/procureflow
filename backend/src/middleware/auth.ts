@@ -37,7 +37,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     if (!user || user.status === 'disabled') {
       return res.status(403).json({ error: 'User account is deactivated or not found.' })
     }
-    req.user = decoded
+    req.user = user as LoggedUser
     next()
   } catch (err) {
     return res.status(403).json({ error: 'Invalid or expired token.' })

@@ -1,25 +1,6 @@
 import React from 'react'
 import { useAuth } from '../../context/AuthContext'
-import {
-  LayoutDashboard,
-  FilePlus2,
-  FileText,
-  CheckCircle,
-  Users,
-  Send,
-  Scale,
-  ShoppingCart,
-  Truck,
-  CreditCard,
-  Building2,
-  Building,
-  ShieldCheck,
-  History,
-  PieChart,
-  Package,
-  Receipt,
-  Tags,
-} from 'lucide-react'
+import { LayoutDashboard, FilePlus2, Users, ShoppingCart, CreditCard, Building2, History, PieChart, Tags } from 'lucide-react'
 
 interface SidebarProps {
   currentView: string
@@ -37,25 +18,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         return [
           { id: 'dashboard', label: 'My Dashboard', icon: LayoutDashboard },
           { id: 'create-pr', label: 'Create Purchase Request', icon: FilePlus2, highlight: true },
-          { id: 'my-prs', label: 'My Purchase Requests', icon: FileText },
         ]
 
       case 'manager':
         return [
           { id: 'dashboard', label: 'Manager Dashboard', icon: LayoutDashboard },
-          { id: 'pending-approvals', label: 'PR Approvals', icon: CheckCircle },
-          { id: 'vendor-approvals', label: 'Vendor Approvals', icon: Users },
           { id: 'reports', label: 'Department Analytics', icon: PieChart },
         ]
 
       case 'procurement_officer':
         return [
           { id: 'dashboard', label: 'Procurement Console', icon: LayoutDashboard },
-          { id: 'approved-prs', label: 'Approved PR Queue', icon: FileText },
-          { id: 'rfqs', label: 'RFQs & Bidding', icon: Send },
-          { id: 'comparison', label: 'Quotation Comparison', icon: Scale, highlight: true },
-          { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-          { id: 'deliveries', label: 'Deliveries & GRN', icon: Truck },
+          { id: 'purchase-orders', label: 'Purchase Orders & GRN', icon: ShoppingCart },
           { id: 'invoices', label: 'Invoices & Payments', icon: CreditCard },
           { id: 'vendors', label: 'Vendor Directory', icon: Building2 },
         ]
@@ -63,15 +37,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
       case 'vendor':
         return [
           { id: 'dashboard', label: 'Vendor Portal', icon: LayoutDashboard },
-          { id: 'vendor-rfqs', label: 'Open RFQs (Bid Requests)', icon: Send },
-          { id: 'vendor-orders', label: 'Purchase Orders', icon: Package },
-          { id: 'vendor-invoices', label: 'Invoices & Settlements', icon: Receipt },
         ]
 
       case 'admin':
         return [
-          { id: 'dashboard', label: 'Admin Command', icon: LayoutDashboard },
-          { id: 'user-management', label: 'User Management', icon: Users },
+          { id: 'dashboard', label: 'User Management', icon: Users },
           { id: 'departments', label: 'Departments & Categories', icon: Tags },
           { id: 'vendors', label: 'Vendor Directory', icon: Building2 },
           { id: 'audit-logs', label: 'Audit Trail (Immutable)', icon: History },
@@ -97,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           <nav className="space-y-1">
             {menuItems.map(item => {
               const Icon = item.icon
-              const isActive = currentView === item.id
+              const isActive = currentView === item.id || (currentView === 'comparison' && item.id === 'dashboard')
               return (
                 <button
                   key={item.id}
@@ -124,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         </div>
 
         {/* Common reports link for internal users */}
-        {user.role !== 'vendor' && user.role !== 'admin' && (
+        {user.role !== 'vendor' && !menuItems.some(item => item.id === 'reports') && (
           <div>
             <div className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Intelligence

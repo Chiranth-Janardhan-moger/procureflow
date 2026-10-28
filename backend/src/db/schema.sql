@@ -192,3 +192,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   ip_address VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Line-level procurement data; safe for existing installations.
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS line_items JSONB;
+ALTER TABLE goods_receipts ADD COLUMN IF NOT EXISTS items JSONB;

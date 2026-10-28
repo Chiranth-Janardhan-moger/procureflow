@@ -4,6 +4,8 @@ import { RFQ, PurchaseOrder, Invoice } from '../../types'
 import { StatCard } from '../../components/common/StatCard'
 import { Badge } from '../../components/common/Badge'
 import { SubmitQuotationModal } from './SubmitQuotationModal'
+import { VendorOrderDetailsModal } from './VendorOrderDetailsModal'
+import { canSubmitQuotation } from '../../services/quotationEligibility'
 import { Modal } from '../../components/common/Modal'
 import {
   Send,
@@ -24,6 +26,8 @@ export const VendorDashboard: React.FC = () => {
 
   // Modals
   const [quoteModalOpen, setQuoteModalOpen] = useState(false)
+  const [detailsOrderId, setDetailsOrderId] = useState<number | null>(null)
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false)
   const [selectedRfq, setSelectedRfq] = useState<RFQ | null>(null)
 
   // Dispatch modal
@@ -66,14 +70,9 @@ export const VendorDashboard: React.FC = () => {
     }
   }
 
-  const handleAcceptPo = async (poId: number) => {
-    try {
-      await api.updatePurchaseOrderStatus(poId, { status: 'accepted' })
-      alert('Purchase Order accepted! You can now begin processing and dispatching.')
-      await loadVendorData()
-    } catch (err: any) {
-      alert(err.message || 'Failed to accept PO')
-    }
+  const openOrderDetails = (id: number) => {
+    setDetailsOrderId(id)
+    setOrderDetailsOpen(true)
   }
 
   const handleDispatchSubmit = async (e: React.FormEvent) => {
@@ -101,7 +100,7 @@ export const VendorDashboard: React.FC = () => {
 
   const openInvoiceModal = (po: PurchaseOrder) => {
     setInvPo(po)
-    setInvNumber(`INV-${Math.floor(400 + Math.random() * 600)}`)
+    setInvNumber(`INV-${crypto.randomUUID()}`)
     setInvAmount(Number(po.total_amount))
     const d = new Date()
     d.setDate(d.getDate() + 30)
@@ -150,7 +149,7 @@ export const VendorDashboard: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <StatCard
           title="Open Tenders"
-          value={rfqs.length}
+          value={rfqs.filter(canSubmitQuotation).length}
           subtitle="Ready for quotation"
           icon={Send}
           color="indigo"
@@ -209,15 +208,21 @@ export const VendorDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setSelectedRfq(rfq)
-                    setQuoteModalOpen(true)
-                  }}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xs transition-colors shrink-0 cursor-pointer inline-flex items-center gap-1.5"
-                >
-                  <Send className="w-3.5 h-3.5" /> Submit Quotation Bid
-                </button>
+                {canSubmitQuotation(rfq) ? (
+                  <button
+                    onClick={() => {
+                      setSelectedRfq(rfq)
+                      setQuoteModalOpen(true)
+                    }}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xs transition-colors shrink-0 cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" /> Submit Quotation Bid
+                  </button>
+                ) : (
+                  <span className="px-4 py-2 text-xs font-semibold text-slate-500">
+                    {rfq.has_submitted_quotation ? 'Quotation submitted' : 'Bidding closed'}
+                  </span>
+                )}
               </div>
             ))
           )}
@@ -250,7 +255,7 @@ export const VendorDashboard: React.FC = () => {
             <tbody className="divide-y divide-slate-100 bg-white">
               {orders.map(po => (
                 <tr key={po.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">{po.po_number}</td>
+                  <td className="py-3.5 px-4 font-mono font-bold text-indigo-700"><button type="button" onClick={() => openOrderDetails(po.id)} className="underline underline-offset-2" aria-label={`View order ${po.po_number}`}>{po.po_number}</button></td>
                   <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900 text-sm">
                     ₹{Number(po.total_amount).toLocaleString('en-IN')}
                   </td>
@@ -268,20 +273,15 @@ export const VendorDashboard: React.FC = () => {
                     <Badge status={po.status} size="sm" />
                   </td>
                   <td className="py-3.5 px-4 text-right space-x-1.5">
-                    {po.status === 'issued' && (
-                      <button
-                        onClick={() => handleAcceptPo(po.id)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
-                      >
-                        <Check className="w-3 h-3" /> Accept Order
-                      </button>
-                    )}
+                    <button type="button" onClick={() => openOrderDetails(po.id)} className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1">
+                      {po.status === 'issued' ? 'Review & Accept' : 'View Details'}
+                    </button>
 
-                    {['issued', 'accepted', 'processing'].includes(po.status) && (
+                    {(['accepted', 'processing'].includes(po.status) || (po.status === 'dispatched' && Number(po.remaining_qty) > 0)) && (
                       <button
                         onClick={() => {
                           setSelectedPo(po)
-                          setTrackingRef(`BDX-${Math.floor(1000000 + Math.random() * 9000000)}BLR`)
+                          setTrackingRef('')
                           setDispatchModalOpen(true)
                         }}
                         className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
@@ -290,7 +290,7 @@ export const VendorDashboard: React.FC = () => {
                       </button>
                     )}
 
-                    {['dispatched', 'delivered'].includes(po.status) && (
+                    {po.status === 'delivered' && !po.invoice_submitted && (
                       <button
                         onClick={() => openInvoiceModal(po)}
                         className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
@@ -305,6 +305,8 @@ export const VendorDashboard: React.FC = () => {
           </table>
         </div>
       </div>
+
+      <VendorOrderDetailsModal orderId={detailsOrderId} isOpen={orderDetailsOpen} onClose={() => setOrderDetailsOpen(false)} onAccepted={loadVendorData} />
 
       {/* Submit Quotation Modal */}
       <SubmitQuotationModal
@@ -419,12 +421,12 @@ export const VendorDashboard: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Amount (₹)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Approved Order Amount (₹)</label>
             <input
               type="number"
               required
               value={invAmount}
-              onChange={e => setInvAmount(parseFloat(e.target.value) || 0)}
+              readOnly
               className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>

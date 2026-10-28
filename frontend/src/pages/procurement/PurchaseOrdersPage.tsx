@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import { PurchaseOrder } from '../../types'
 import { Badge } from '../../components/common/Badge'
 import { GoodsReceiptModal } from './GoodsReceiptModal'
+import { PurchaseOrderContents } from '../../components/common/PurchaseOrderContents'
 import { Modal } from '../../components/common/Modal'
 import {
   ShoppingCart,
@@ -21,6 +23,8 @@ interface Props {
 }
 
 export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
+  const { user } = useAuth()
+  const canProcess = ['procurement_officer', 'admin'].includes(user?.role || '')
   const [orders, setOrders] = useState<PurchaseOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -140,6 +144,7 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
               <thead className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-semibold uppercase">
                 <tr>
                   <th className="py-3 px-4">PO Identifier</th>
+                  <th className="py-3 px-4">Purchase</th>
                   <th className="py-3 px-4">Vendor Partner</th>
                   <th className="py-3 px-4 text-right">Order Value</th>
                   <th className="py-3 px-4">Expected Date</th>
@@ -151,7 +156,8 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredOrders.map(po => (
                   <tr key={po.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">{po.po_number}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-700"><button type="button" onClick={() => openPoDetails(po.id)} className="underline underline-offset-2" aria-label={`View order ${po.po_number}`}>{po.po_number}</button></td>
+                    <td className="py-3.5 px-4 max-w-xs"><p className="font-semibold text-slate-900">{po.items?.map(item => item.item_name).join(', ') || po.pr_purpose || 'See order details'}</p><p className="mt-1 text-xs text-slate-500">{po.pr_number || 'Purchase request'} · {po.ordered_qty ?? po.items?.reduce((sum, item) => sum + Number(item.quantity), 0) ?? '—'} units</p></td>
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900">{po.vendor_name}</div>
                       <div className="text-[10px] text-slate-400 font-mono">{po.vendor_code}</div>
@@ -214,6 +220,8 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
               </div>
             </div>
 
+            <PurchaseOrderContents order={selectedPo} />
+
             {/* Consignment & Delivery Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
@@ -221,8 +229,8 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
                   <Building className="w-3.5 h-3.5 text-indigo-600" /> Supplier Details
                 </div>
                 <div className="text-sm font-bold text-slate-900">{selectedPo.vendor_name}</div>
-                <div className="text-xs text-slate-600 mt-0.5">{selectedPo.vendor_address || 'Electronics City, Bengaluru'}</div>
-                <div className="text-[11px] text-slate-400 font-mono mt-1">GSTIN: {selectedPo.gst_number || '29ABCDE1234F1Z5'}</div>
+                <div className="text-xs text-slate-600 mt-0.5">{selectedPo.vendor_address || 'Not recorded'}</div>
+                <div className="text-[11px] text-slate-400 font-mono mt-1">GSTIN: {selectedPo.gst_number || 'Not recorded'}</div>
               </div>
 
               <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
@@ -247,12 +255,12 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Goods Receipt Notes (GRN)
                 </h4>
-                {['dispatched', 'delivered'].includes(selectedPo.status) && (
+                {canProcess && selectedPo.status === 'dispatched' && Number(selectedPo.remaining_qty) > 0 && (
                   <button
                     onClick={() => setGrnModalOpen(true)}
                     className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
                   >
-                    <FileCheck2 className="w-3.5 h-3.5" /> Record Goods Receipt
+                    <FileCheck2 className="w-3.5 h-3.5" /> Record Delivery / GRN
                   </button>
                 )}
               </div>
@@ -318,7 +326,7 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
                           <span>Settled Ref: <strong>{inv.payment.payment_ref}</strong></span>
                           <span>Paid on {inv.payment.payment_date}</span>
                         </div>
-                      ) : (
+                      ) : canProcess && inv.status !== 'paid' && selectedPo.status === 'delivered' ? (
                         <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
                           <button
                             onClick={() => {
@@ -330,7 +338,7 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
                             <CreditCard className="w-3.5 h-3.5" /> Record Payment Settlement
                           </button>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -365,12 +373,12 @@ export const PurchaseOrdersPage: React.FC<Props> = ({ initialPoId }) => {
       >
         <form onSubmit={handleRecordPayment} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Settlement Amount (₹)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Full Invoice Settlement (₹)</label>
             <input
               type="number"
               required
               value={payAmount}
-              onChange={e => setPayAmount(parseFloat(e.target.value) || 0)}
+              readOnly
               className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>

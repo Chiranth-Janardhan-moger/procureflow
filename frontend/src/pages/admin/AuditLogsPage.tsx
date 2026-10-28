@@ -138,7 +138,7 @@ export const AuditLogsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-700 max-w-sm truncate">{log.details}</td>
-                    <td className="py-3.5 px-4 font-mono text-slate-400 text-[11px]">{log.ip_address || '127.0.0.1'}</td>
+                    <td className="py-3.5 px-4 font-mono text-slate-400 text-[11px]">{log.ip_address || 'Not recorded'}</td>
                   </tr>
                 ))}
               </tbody>

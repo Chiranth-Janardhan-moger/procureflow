@@ -57,7 +57,7 @@ export const ProcurementDashboard: React.FC<Props> = ({
   }
 
   // PRs approved by manager waiting for RFQ
-  const approvedPrs = prs.filter(p => p.status === 'approved' || p.status === 'in_procurement')
+  const approvedPrs = prs.filter(p => p.status === 'approved' && !rfqs.some(rfq => rfq.pr_id === p.id))
   const openRfqs = rfqs.filter(r => r.status === 'open' || r.status === 'evaluation')
   const activeOrders = orders.filter(p => p.status !== 'completed' && p.status !== 'cancelled')
   const pendingDeliveries = orders.filter(p => p.status === 'dispatched')
